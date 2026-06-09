@@ -1,114 +1,103 @@
 const express = require("express");
-
 const mongoose = require("mongoose");
-
 const cors = require("cors");
-
 require("dotenv").config();
 
 const http = require("http");
-
 const { Server } = require("socket.io");
 
 const authRoutes = require("./routes/authRoutes");
-
 const mediaRoutes = require("./routes/mediaRoutes");
-
 const eventRoutes = require("./routes/eventRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
+const collectionRoutes = require("./routes/collectionRoutes");
 
 const app = express();
 
-const server = http.createServer(app);
 
-const io = socketio(server, {
 
-  cors: {
+// ======================
+// MIDDLEWARES
+// ======================
 
-    origin: [
+app.use(express.json());
 
-      "http://localhost:5173",
-
-      "https://event-media-manager.vercel.app"
-
-    ],
-
-    methods: [
-
-      "GET",
-      "POST"
-
-    ],
-
-    credentials: true
-
-  }
-
-});
-const notificationRoutes =
-  require("./routes/notificationRoutes");
-
-const collectionRoutes =require("./routes/collectionRoutes");
-
-app.get("/", (req, res) => {
-
-    res.send("EventSphere AI Backend Running 🚀");
-
-});
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://event-media-manager.vercel.app"
-    ],
+    origin: true,
     credentials: true,
   })
 );
 
-app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
-app.use("/api/auth", authRoutes);
 
-app.use("/api/events", eventRoutes);
-app.use("/api/media", mediaRoutes);
-app.use( "/api/collections", collectionRoutes);
-app.use(
 
-  "/api/notifications",
+// ======================
+// BASIC ROUTE
+// ======================
 
-  notificationRoutes
-
-);
-
-io.on("connection", (socket) => {
-
-    console.log("User Connected 🚀");
-
-    socket.on("send_notification", (data) => {
-
-        io.emit("receive_notification", data);
-
-    });
-
+app.get("/", (req, res) => {
+  res.send("EventSphere AI Backend Running 🚀");
 });
 
-mongoose.connect(process.env.MONGO_URI)
 
-.then(() => {
 
-    console.log("MongoDB Connected");
+// ======================
+// ROUTES
+// ======================
+
+app.use("/api/auth", authRoutes);
+app.use("/api/events", eventRoutes);
+app.use("/api/media", mediaRoutes);
+app.use("/api/collections", collectionRoutes);
+app.use("/api/notifications", notificationRoutes);
+
+
+
+// ======================
+// SOCKET.IO SETUP
+// ======================
+
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: true,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("User Connected 🚀");
+
+  socket.on("send_notification", (data) => {
+    io.emit("receive_notification", data);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User Disconnected ❌");
+  });
+});
+
+
+
+// ======================
+// DATABASE CONNECTION
+// ======================
+
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log("MongoDB Connected ✅");
+
     const PORT = process.env.PORT || 5000;
 
     server.listen(PORT, () => {
-
-        console.log(`Server running on ${PORT}`);
-
+      console.log(`Server running on port ${PORT} 🚀`);
     });
-
-})
-
-.catch((err) => {
-
-    console.log(err);
-
-});
+  })
+  .catch((err) => {
+    console.log("MongoDB Error ❌", err);
+  });
