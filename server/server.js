@@ -20,15 +20,30 @@ const app = express();
 
 const server = http.createServer(app);
 
-const io = new Server(server, {
+const io = socketio(server, {
 
-    cors: {
-        origin: "http://localhost:5173",
-        methods: ["GET", "POST"]
-    }
+  cors: {
+
+    origin: [
+
+      "http://localhost:5173",
+
+      "https://event-media-manager.vercel.app"
+
+    ],
+
+    methods: [
+
+      "GET",
+      "POST"
+
+    ],
+
+    credentials: true
+
+  }
 
 });
-
 const notificationRoutes =
   require("./routes/notificationRoutes");
 
@@ -40,10 +55,21 @@ app.get("/", (req, res) => {
 
 });
 app.use(
+
   cors({
-    origin: "*",
-    credentials: true,
+
+    origin: [
+
+      "http://localhost:5173",
+
+      "https://event-media-manager.vercel.app"
+
+    ],
+
+    credentials: true
+
   })
+
 );
 
 app.use(express.json());
