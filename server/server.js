@@ -41,7 +41,7 @@ app.get("/", (req, res) => {
 });
 app.use(
   cors({
-    origin: "https://event-media-manager.vercel.app/",
+    origin: "*",
     credentials: true,
   })
 );
