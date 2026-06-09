@@ -64,16 +64,16 @@ router.get(
 
       const collections =
 
-        await Collection.find({
+await Collection.find({
 
-          userEmail:
-            req.params.email
+userEmail:
+req.params.email
 
-        })
+})
 
-        .populate("media");
+.populate("media");
 
-      res.json(collections);
+res.json(collections);
 
     }
 

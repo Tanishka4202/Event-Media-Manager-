@@ -6,6 +6,15 @@ const multer = require("multer");
 
 const path = require("path");
 
+const Media = require("../models/Media");
+
+const Event = require("../models/Event");
+
+const generateTags =
+require("../utils/generateTags");
+
+/* STORAGE */
+
 const storage = multer.diskStorage({
 
   destination: (req, file, cb) => {
@@ -20,7 +29,9 @@ const storage = multer.diskStorage({
 
       null,
 
-      Date.now() + path.extname(file.originalname)
+      Date.now() +
+
+      path.extname(file.originalname)
 
     );
 
@@ -28,11 +39,15 @@ const storage = multer.diskStorage({
 
 });
 
-const upload = multer({ storage });
-const Media = require("../models/Media");
+const upload = multer({
 
+  storage
 
-// UPLOAD
+});
+
+/* ========================= */
+/* UPLOAD MEDIA */
+/* ========================= */
 
 router.post(
 
@@ -41,6 +56,7 @@ router.post(
   upload.single("file"),
 
   async (req, res) => {
+
     console.log("UPLOAD ROUTE HIT");
 
     try {
@@ -57,28 +73,88 @@ router.post(
 
       }
 
-      const mediaItem = {
+      /* BODY DATA */
 
-        url: `http://localhost:5000/uploads/${file.filename}`,
+      const caption =
+        req.body.caption;
 
-        type:
-          file.mimetype.startsWith("image")
-            ? "image"
-            : "video",
+      const eventId =
+        req.body.eventId;
 
-        eventId:
-          req.body.eventId,
+      const uploadedBy =
+        req.body.uploadedBy;
 
-        uploadedBy:
-          req.body.uploadedBy,
+      /* FIND EVENT */
 
-        caption: req.body.caption
+      const event =
+        await Event.findById(
+          eventId
+        );
 
-      };
+      /* GENERATE TAGS */
 
-      await Media.create(
-        mediaItem
+      let tags = [];
+
+      console.log(
+        "GENERATING TAGS..."
       );
+
+      try {
+
+        tags =
+          await generateTags(
+
+            event?.name || "",
+
+            event?.description || "",
+
+            caption || ""
+
+          );
+
+        console.log(
+          "TAGS:",
+          tags
+        );
+
+      }
+
+      catch (error) {
+
+        console.log(
+
+          "TAG ERROR:",
+
+          error.message
+
+        );
+
+      }
+
+      /* CREATE MEDIA */
+
+      const mediaItem =
+        await Media.create({
+
+          url:
+            `http://localhost:5000/uploads/${file.filename}`,
+
+          type:
+            file.mimetype.startsWith("image")
+
+              ? "image"
+
+              : "video",
+
+          eventId,
+
+          uploadedBy,
+
+          caption,
+
+          tags
+
+        });
 
       res.status(201).json({
 
@@ -96,7 +172,8 @@ router.post(
 
       res.status(500).json({
 
-        message: error.message
+        message:
+          error.message
 
       });
 
@@ -106,8 +183,9 @@ router.post(
 
 );
 
-
-// GET MEDIA
+/* ========================= */
+/* GET EVENT MEDIA */
+/* ========================= */
 
 router.get(
 
@@ -118,7 +196,6 @@ router.get(
     try {
 
       const media =
-
         await Media.find({
 
           eventId:
@@ -145,6 +222,10 @@ router.get(
 
 );
 
+/* ========================= */
+/* DELETE MEDIA */
+/* ========================= */
+
 router.delete(
 
   "/:id",
@@ -154,7 +235,9 @@ router.delete(
     try {
 
       await Media.findByIdAndDelete(
+
         req.params.id
+
       );
 
       res.json({
@@ -180,6 +263,11 @@ router.delete(
   }
 
 );
+
+/* ========================= */
+/* LIKE MEDIA */
+/* ========================= */
+
 router.put(
 
   "/like/:id",
@@ -188,26 +276,37 @@ router.put(
 
     try {
 
+      const { userId } =
+        req.body;
+
       const media =
         await Media.findById(
+
           req.params.id
+
         );
 
       const alreadyLiked =
-        media.likes.includes(userId);
+        media.likes.includes(
+          userId
+        );
 
       if (alreadyLiked) {
 
         media.likes =
           media.likes.filter(
+
             id => id !== userId
+
           );
 
       }
 
       else {
 
-        media.likes.push(userId);
+        media.likes.push(
+          userId
+        );
 
       }
 
@@ -231,6 +330,11 @@ router.put(
   }
 
 );
+
+/* ========================= */
+/* COMMENT */
+/* ========================= */
+
 router.post(
 
   "/comment/:id",
@@ -242,70 +346,29 @@ router.post(
       const { user, text } =
         req.body;
 
-      const mediaItem =
+      const media =
         await Media.findById(
+
           req.params.id
+
         );
 
-      if (!mediaItem) {
+      if (!media) {
 
         return res.status(404).json({
 
-          message: "Media not found"
+          message:
+            "Media not found"
 
         });
 
       }
 
-      mediaItem.comments.unshift({
+      media.comments.unshift({
 
         user,
 
         text
-
-      });
-
-      await mediaItem.save();
-
-      res.json(mediaItem);
-
-    }
-
-    catch (error) {
-
-      console.log(error);
-
-      res.status(500).json({
-
-        message: error.message
-
-      });
-
-    }
-
-  }
-
-);
-router.put(
-
-  "/comment/:id",
-
-  async (req, res) => {
-
-    try {
-
-      const media =
-        await Media.findById(
-          req.params.id
-        );
-
-      media.comments.push({
-
-        user:
-          req.body.user,
-
-        text:
-          req.body.text
 
       });
 
@@ -316,6 +379,8 @@ router.put(
     }
 
     catch (error) {
+
+      console.log(error);
 
       res.status(500).json({
 
@@ -330,6 +395,10 @@ router.put(
 
 );
 
+/* ========================= */
+/* FAVOURITE */
+/* ========================= */
+
 router.put(
 
   "/favourite/:id",
@@ -340,7 +409,9 @@ router.put(
 
       const media =
         await Media.findById(
+
           req.params.id
+
         );
 
       media.favourites.push({
@@ -371,6 +442,10 @@ router.put(
 
 );
 
+/* ========================= */
+/* TAG USERS */
+/* ========================= */
+
 router.put(
 
   "/tag/:id",
@@ -381,7 +456,9 @@ router.put(
 
       const media =
         await Media.findById(
+
           req.params.id
+
         );
 
       media.taggedUsers.push({
@@ -403,80 +480,6 @@ router.put(
 
         message:
           error.message
-
-      });
-
-    }
-
-  }
-
-);
-router.put(
-
-  "/save/:id",
-
-  async (req, res) => {
-
-    try {
-
-      const { userEmail } =
-        req.body;
-
-      const mediaItem =
-        await Media.findById(
-          req.params.id
-        );
-
-      if (!mediaItem) {
-
-        return res.status(404).json({
-
-          message: "Media not found"
-
-        });
-
-      }
-
-      const alreadySaved =
-
-        mediaItem.savedBy.includes(
-          userEmail
-        );
-
-      if (alreadySaved) {
-
-        mediaItem.savedBy =
-
-          mediaItem.savedBy.filter(
-
-            email =>
-              email !== userEmail
-
-          );
-
-      }
-
-      else {
-
-        mediaItem.savedBy.push(
-          userEmail
-        );
-
-      }
-
-      await mediaItem.save();
-
-      res.json(mediaItem);
-
-    }
-
-    catch (error) {
-
-      console.log(error);
-
-      res.status(500).json({
-
-        message: error.message
 
       });
 

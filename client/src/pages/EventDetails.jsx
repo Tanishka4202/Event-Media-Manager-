@@ -46,6 +46,8 @@ const EventDetails = () => {
   const [collections, setCollections] = useState([]);
   const [selectedMediaId, setSelectedMediaId] = useState(null);
   const [newCollection, setNewCollection] = useState("");
+  const [search, setSearch] =
+    useState("");
 
   // FETCH MEDIA
 
@@ -206,7 +208,11 @@ const EventDetails = () => {
   };
 
   const saveToCollection = async (
-    collectionId
+
+    collectionId,
+
+    mediaId
+
   ) => {
 
     try {
@@ -219,18 +225,19 @@ const EventDetails = () => {
 
           collectionId,
 
-          mediaId:
-            selectedMediaId
+          mediaId
 
         }
 
       );
 
       toast.success(
+
         "Saved 😭🔥"
+
       );
 
-      setShowCollectionModal(false);
+      setShowSaveModal(false);
 
     }
 
@@ -238,10 +245,15 @@ const EventDetails = () => {
 
       console.log(error);
 
+      toast.error(
+
+        "Failed to save"
+
+      );
+
     }
 
   };
-
   // UPLOAD
 
   const uploadMedia = async () => {
@@ -523,13 +535,33 @@ const EventDetails = () => {
 
       setMedia(
 
-        media.map((item) =>
+        media
 
-          item._id === mediaId
-            ? res.data
-            : item
+          .filter((item) => {
 
-        )
+            const text = `
+
+${item.caption}
+
+${item.uploadedBy}
+
+${item.tags?.join(" ")}
+
+`.toLowerCase();
+
+            return text.includes(
+              search.toLowerCase()
+            );
+
+          })
+
+          .map((item) =>
+
+            item._id === mediaId
+              ? res.data
+              : item
+
+          )
 
       );
 
@@ -867,6 +899,21 @@ const EventDetails = () => {
           </div>
 
         </div>
+        <input
+
+          type="text"
+
+          placeholder="Search by tags, uploader, event..."
+
+          value={search}
+
+          onChange={(e) =>
+            setSearch(e.target.value)
+          }
+
+          className="w-full bg-white rounded-2xl px-6 py-4 shadow-lg outline-none mt-10"
+
+        />
         {/* MEDIA GRID */}
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-7 mt-14">
@@ -935,6 +982,33 @@ const EventDetails = () => {
 
 
                   }
+                  <div className="flex flex-wrap gap-2 px-5 pt-4">
+
+                    {
+
+                      item.tags?.slice(0, 3).map(
+
+                        (tag, index) => (
+
+                          <span
+
+                            key={index}
+
+                            className="px-3 py-1 rounded-full bg-[#f3ebff] text-[#7B2CBF] text-xs font-semibold"
+
+                          >
+
+                            #{tag}
+
+                          </span>
+
+                        )
+
+                      )
+
+                    }
+
+                  </div>
                   <div className="flex items-center justify-between px-5 py-4">
 
                     {/* LEFT */}
@@ -949,20 +1023,20 @@ const EventDetails = () => {
 
                           likeMedia(item._id);
 
-                          socket.emit(
+                          // socket.emit(
 
-                            "send_notification",
+                          //   "send_notification",
 
-                            {
+                          //   {
 
-                              id: Date.now(),
+                          //     id: Date.now(),
 
-                              text:
-                                `${user.name} liked your photo ❤️`
+                          //     text:
+                          //       `${user.name} liked your photo ❤️`
 
-                            }
+                          //   }
 
-                          );
+                          // );
 
                         }} className={`flex items-center gap-2 transition-all ${isLiked
 
@@ -1589,6 +1663,7 @@ const EventDetails = () => {
 
                 />
 
+
                 <button
 
                   onClick={createCollection}
@@ -1600,6 +1675,45 @@ const EventDetails = () => {
                   Create
 
                 </button>
+
+              </div>
+              <div className="mt-6 flex flex-wrap gap-3">
+
+                {
+
+                  collections.map(
+
+                    (collection) => (
+
+                      <button
+
+                        key={collection._id}
+
+                        onClick={() => {
+
+                          saveToCollection(
+
+                            collection._id,
+
+                            selectedSaveMedia._id
+
+                          );
+
+                        }}
+
+                        className="px-5 py-2 rounded-full bg-[#f3ebff] text-[#7B2CBF] font-semibold hover:bg-[#7B2CBF] hover:text-white transition-all"
+
+                      >
+
+                        {collection.name}
+
+                      </button>
+
+                    )
+
+                  )
+
+                }
 
               </div>
 

@@ -50,6 +50,7 @@ const mediaSchema =
   }
 
 ],
+tags: [String],
     favourites: [
 
       {

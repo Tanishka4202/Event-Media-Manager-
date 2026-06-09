@@ -17,7 +17,7 @@ const collectionSchema = new mongoose.Schema({
 
     }
 
-  ]
+  ],
 
 });
 
