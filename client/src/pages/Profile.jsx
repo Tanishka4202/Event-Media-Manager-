@@ -23,7 +23,7 @@ const Profile = () => {
 
             const res = await axios.get(
 
-                "http://localhost:5000/api/media/my-uploads",
+                "https://event-media-manager.onrender.com/api/media/my-uploads",
 
                 {
 
@@ -55,7 +55,7 @@ const Profile = () => {
 
             const res = await axios.get(
 
-                "http://localhost:5000/api/auth/me",
+                "https://event-media-manager.onrender.com/api/auth/me",
 
                 {
 

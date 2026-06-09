@@ -40,7 +40,7 @@ const Register = () => {
 
             const res = await axios.post(
 
-                "http://localhost:5000/api/auth/register",
+                "https://event-media-manager.onrender.com/api/auth/register",
 
                 {
                     name,
