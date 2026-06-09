@@ -1,16 +1,89 @@
-# React + Vite
+Event Media Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern full-stack social media platform for events where users can upload, explore, save, and interact with event media in real time.
 
-Currently, two official plugins are available:
+🚀 Live Demo
+Frontend
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Backend API
 
-## React Compiler
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+📌 Problem Statement
 
-## Expanding the ESLint configuration
+During college fests, hackathons, cultural events, and gatherings, media gets scattered across multiple platforms and chats. Users struggle to:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Find event photos/videos easily
+Save memories in organized collections
+Interact with media socially
+Receive updates and notifications
+Access media in one centralized platform
+
+This platform solves these problems by providing a dedicated event media-sharing ecosystem.
+
+✨ Features
+
+🔐 Authentication
+User Signup/Login
+JWT Authentication
+Protected Routes
+Secure Password Hashing
+
+🖼️ Media Upload
+Upload Images
+Upload Videos
+Add Captions & Tags
+Cloud Media Storage
+
+❤️ Social Interactions
+Like Posts
+Comment on Posts
+Share Media
+Save Posts to Collections
+
+📂 Collections
+Create Collections
+Save Media into Collections
+Organize Event Memories
+
+🔔 Notifications
+Real-time Notifications
+Like Notifications
+Comment Notifications
+Save Notifications
+
+💬 Real-time Chat
+Room-based Chat
+Live Messaging
+Notification Badge
+
+🎨 UI/UX
+Modern Glassmorphism Design
+Responsive Layout
+Smooth Animations
+Mobile Friendly Interface
+
+🛠️ Tech Stack
+Frontend
+React.js
+Tailwind CSS
+Axios
+React Router
+Backend
+Node.js
+Express.js
+MongoDB
+Mongoose
+
+- Authentication
+JWT
+bcrypt.js
+
+- Media Storage
+Cloudinary
+Real-time Features
+Socket.IO
+
+
+- Deployment
+Vercel / Netlify
+Render / Railway
