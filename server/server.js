@@ -39,9 +39,17 @@ app.get("/", (req, res) => {
     res.send("EventSphere AI Backend Running 🚀");
 
 });
-app.use(cors({
-    origin: "*"
-}));
+app.use(
+
+  cors({
+
+    origin: "https://event-media-manager.vercel.app/",
+
+    credentials: true
+
+  })
+
+);
 
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
