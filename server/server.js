@@ -28,6 +28,9 @@ const io = new Server(server, {
     }
 
 });
+
+const collectionRoutes =require("./routes/collectionRoutes");
+
 app.get("/", (req, res) => {
 
     res.send("EventSphere AI Backend Running 🚀");
@@ -44,7 +47,7 @@ app.use("/api/auth", authRoutes);
 
 app.use("/api/events", eventRoutes);
 app.use("/api/media", mediaRoutes);
-
+app.use( "/api/collections", collectionRoutes);
 
 io.on("connection", (socket) => {
 

@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useParams } from "react-router-dom";
-import socket from "../socket";
 import { io } from "socket.io-client";
 
 import {
@@ -38,10 +37,16 @@ const EventDetails = () => {
   const { id } = useParams();
   const [event, setEvent] = useState(null);
   const [caption, setCaption] = useState("");
-  const socket = io(import.meta.env.VITE_API_URL);
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [comments, setComments] = useState([]);
+  const [showShare, setShowShare] = useState(false);
+  const [selectedShareMedia, setSelectedShareMedia] = useState(null);
+  const [showCollectionModal, setShowCollectionModal] = useState(false);
+  const [collections, setCollections] = useState([]);
+  const [selectedMediaId, setSelectedMediaId] = useState(null);
+  const [newCollection, setNewCollection] = useState("");
+
   // FETCH MEDIA
 
   const fetchMedia = async () => {
@@ -88,11 +93,34 @@ const EventDetails = () => {
     }
 
   };
+  const fetchCollections = async () => {
+
+    try {
+
+      const res =
+        await axios.get(
+
+          `${import.meta.env.VITE_API_URL}/api/collections/${user.email}`
+
+        );
+
+      setCollections(res.data);
+
+    }
+
+    catch (error) {
+
+      console.log(error);
+
+    }
+
+  };
   useEffect(() => {
 
     fetchMedia();
 
     fetchEvent();
+    fetchCollections();
 
   }, []);
 
@@ -119,6 +147,98 @@ const EventDetails = () => {
       );
 
     setSelectedFiles(updated);
+
+  };
+
+  const createCollection = async () => {
+
+    try {
+
+      if (!newCollection.trim())
+        return;
+
+      const res =
+        await axios.post(
+
+          `${import.meta.env.VITE_API_URL}/api/collections/create`,
+
+          {
+
+            name: newCollection,
+
+            userEmail:
+              user.email
+
+          }
+
+        );
+
+      /* UPDATE UI */
+
+      setCollections((prev) => ([
+
+        ...prev,
+
+        res.data
+
+      ]));
+
+      toast.success(
+        "Collection created 😭🔥"
+      );
+
+      /* CLEAR INPUT */
+
+      setNewCollection("");
+
+    }
+
+    catch (error) {
+
+      console.log(error);
+
+      toast.error(
+        "Failed to create collection"
+      );
+
+    }
+
+  };
+
+  const saveToCollection = async (
+    collectionId
+  ) => {
+
+    try {
+
+      await axios.put(
+
+        `${import.meta.env.VITE_API_URL}/api/collections/save`,
+
+        {
+
+          collectionId,
+
+          mediaId:
+            selectedMediaId
+
+        }
+
+      );
+
+      toast.success(
+        "Saved 😭🔥"
+      );
+
+      setShowCollectionModal(false);
+
+    }
+
+    catch (error) {
+
+      console.log(error);
+
+    }
 
   };
 
@@ -381,7 +501,186 @@ const EventDetails = () => {
     }
 
   };
+  const saveMedia = async (
+    mediaId
+  ) => {
 
+    try {
+
+      const res =
+        await axios.put(
+
+          `${import.meta.env.VITE_API_URL}/api/media/save/${mediaId}`,
+
+          {
+
+            userEmail:
+              user.email
+
+          }
+
+        );
+
+      setMedia(
+
+        media.map((item) =>
+
+          item._id === mediaId
+            ? res.data
+            : item
+
+        )
+
+      );
+
+    }
+
+    catch (error) {
+
+      console.log(error);
+
+    }
+
+  };
+
+  const user = JSON.parse(
+    localStorage.getItem("user")
+  );
+
+
+  const addComment = async (
+    mediaId
+  ) => {
+
+    try {
+
+      if (!commentText.trim())
+        return;
+
+      /* STORE CURRENT TEXT */
+
+      const text =
+        commentText;
+
+      /* CLEAR INPUT IMMEDIATELY */
+
+      setCommentText("");
+
+      /* CREATE COMMENT */
+
+      const newComment = {
+
+        user: user.name,
+
+        text
+
+      };
+
+      /* UPDATE MEDIA STATE INSTANTLY */
+
+      setMedia((prevMedia) =>
+
+        prevMedia.map((item) => {
+
+          if (item._id === mediaId) {
+
+            return {
+
+              ...item,
+
+              comments: [
+
+                newComment,
+
+                ...(item.comments || [])
+
+              ]
+
+            };
+
+          }
+
+          return item;
+
+        })
+
+      );
+
+      /* UPDATE OPEN POPUP */
+
+      setSelectedMedia((prev) => {
+
+        if (!prev)
+          return prev;
+
+        return {
+
+          ...prev,
+
+          comments: [
+
+            newComment,
+
+            ...(prev.comments || [])
+
+          ]
+
+        };
+
+      });
+
+      /* SAVE TO DATABASE */
+
+      await axios.post(
+
+        `${import.meta.env.VITE_API_URL}/api/media/comment/${mediaId}`,
+
+        {
+
+          user: user.name,
+
+          text
+
+        }
+
+      );
+
+      /* REALTIME NOTIFICATION */
+
+      socket.emit(
+
+        "send_notification",
+
+        {
+
+          id: Date.now(),
+
+          text:
+            `${user.name} commented on your upload 💬`
+
+        }
+
+      );
+
+    }
+
+    catch (error) {
+
+      console.log(error);
+
+    }
+
+  };
+  const allMedia =
+
+    collections.flatMap(
+
+      collection =>
+        collection.media
+
+    );
+  const [selectedMedia, setSelectedMedia] =
+    useState(null);
   if (!event) {
 
     return (
@@ -396,46 +695,8 @@ const EventDetails = () => {
 
   }
 
-  const user = JSON.parse(
-    localStorage.getItem("user")
-  );
-  const addComment = () => {
 
-    if (!commentText.trim())
-      return;
 
-    const newComment = {
-
-      id: Date.now(),
-
-      user: user.name,
-
-      text: commentText
-
-    };
-
-    setComments(
-      [newComment, ...comments]
-    );
-
-    socket.emit(
-
-      "send_notification",
-
-      {
-
-        id: Date.now(),
-
-        text:
-          `${user.name} commented on your upload 💬`
-
-      }
-
-    );
-
-    setCommentText("");
-
-  };
   return (
 
     <div className="min-h-screen bg-gradient-to-br from-[#f8f5ff] via-[#fcfbff] to-[#eef2ff]">
@@ -611,266 +872,227 @@ const EventDetails = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-7 mt-14">
 
           {
+            media.map((item, index) => {
 
-            media.map((item, index) => (
+              const isLiked =
 
-              <div key={index}
-                className="bg-white rounded-[30px] overflow-hidden shadow-xl relative group"
+                item.likes?.includes(
+                  user?.email
+                );
+              const isSaved =
 
-              >
-                <button
+                item.savedBy?.includes(
+                  user?.email
+                );
 
-                  onClick={() =>
-                    deleteMedia(item._id)
-                  } className="absolute top-4 right-4 w-11 h-11 rounded-full bg-red-500/90 backdrop-blur-md
+              return (
+
+                <div key={index}
+                  className="bg-white rounded-[30px] overflow-hidden shadow-xl relative group">
+                  <button
+
+                    onClick={() =>
+                      deleteMedia(item._id)
+                    } className="absolute top-4 right-4 w-11 h-11 rounded-full bg-red-500/90 backdrop-blur-md
   text-white flex items-center justify-center shadow-2xl opacity-0 group-hover:opacity-100
  translate-y-[-10px] group-hover:translate-y-0 transition-all duration-300 hover:scale-110 hover:bg-red-600 z-50">
 
-                  <FaTrash className="text-sm" />
+                    <FaTrash className="text-sm" />
 
-                </button>
-                {
+                  </button>
+                  {
 
-                  item.type === "image"
+                    item.type === "image"
 
-                    ? (
+                      ? (
 
-                      <img
+                        <img
 
-                        src={item.url}
+                          src={item.url}
 
-                        alt="media"
+                          alt="media"
 
-                        className="w-full h-[260px] object-cover"
+                          className="w-full h-[260px] object-cover"
 
-                      />
+                        />
 
-                    )
+                      )
 
-                    : (
+                      : (
 
-                      <video
+                        <video
 
-                        src={item.url}
+                          src={item.url}
 
-                        controls
+                          controls
 
-                        className="w-full h-[260px] object-cover"
+                          className="w-full h-[260px] object-cover"
 
-                      />
+                        />
 
-                    )
+                      )
 
 
 
-                }
-                <div className="flex items-center justify-between px-5 py-4">
+                  }
+                  <div className="flex items-center justify-between px-5 py-4">
 
-                  {/* LEFT */}
+                    {/* LEFT */}
 
-                 <div className="flex items-center gap-6 mt-4">
+                    <div className="flex items-center gap-6 mt-4">
 
-  {/* LIKE */}
+                      {/* LIKE */}
 
-  <button
+                      <button
 
-    onClick={() => {
+                        onClick={() => {
 
-      likeMedia(item._id);
+                          likeMedia(item._id);
 
-      socket.emit(
+                          socket.emit(
 
-        "send_notification",
+                            "send_notification",
 
-        {
+                            {
 
-          id: Date.now(),
+                              id: Date.now(),
 
-          text:
-            `${user.name} liked your photo ❤️`
+                              text:
+                                `${user.name} liked your photo ❤️`
 
-        }
+                            }
 
-      );
+                          );
 
-    }}
+                        }} className={`flex items-center gap-2 transition-all ${isLiked
 
-    className="flex items-center gap-2 text-gray-500 hover:text-red-500 transition-all"
+                          ? "text-red-500"
 
-  >
+                          : "text-gray-500 hover:text-red-500"}
 
-    <FaHeart />
+`}>
 
-    <span>
+                        <FaHeart />
 
-      {item.likes?.length || 0}
+                        <span>
 
-    </span>
+                          {item.likes?.length || 0}
 
-  </button>
+                        </span>
 
-  {/* COMMENT */}
+                      </button>
 
-  <button
+                      {/* COMMENT */}
 
-    onClick={() =>
-      setShowComments(true)
-    }
+                      <button
 
-    className="flex items-center gap-2 text-gray-500 hover:text-blue-500 transition-all"
+                        onClick={() => {
 
-  >
+                          setSelectedMedia(item);
 
-    <FaComment />
+                          setShowComments(true);
 
-    <span>
+                        }}
 
-      {comments.length}
+                        className="flex items-center gap-2 text-gray-500 hover:text-blue-500 transition-all"
 
-    </span>
+                      >
 
-  </button>
+                        <FaComment />
 
-  {/* SHARE */}
+                        <span>
 
-  <button
+                          {item.comments?.length || 0}
 
-    onClick={() => {
+                        </span>
 
-      navigator.clipboard.writeText(
-        window.location.href
-      );
+                      </button>
 
-      toast.success(
-        "Link copied 🔗"
-      );
+                      {/* SHARE */}
 
-    }}
+                      <button
 
-    className="flex items-center gap-2 text-gray-500 hover:text-green-500 transition-all"
+                        onClick={() => {
 
-  >
+                          setSelectedShareMedia(item);
 
-    <FaShare />
+                          setShowShare(true);
 
-    <span>
+                        }}
 
-      {item.shares || 0}
+                        className="flex items-center gap-2 text-gray-500 hover:text-green-500 transition-all"
 
-    </span>
+                      >
 
-  </button>
+                        <FaShare />
 
-</div>
+                        <span className="text-base">
 
-                  {/* RIGHT */}
+                          {item.shares || 0}
 
-                  <div className="flex items-center gap-5">
+                        </span>
 
-                    <button className="text-gray-500 hover:text-yellow-500 transition-all">
+                      </button>
 
-                      <FaBookmark />
+                    </div>
 
-                    </button>
+                    {/* RIGHT */}
 
-                    <a
+                    <div className="flex items-center gap-5">
 
-                      href={item.url}
+                      <button
 
-                      download
+                        onClick={() => {
 
-                      className="text-gray-500 hover:text-[#7B2CBF] transition-all"
+                          setSelectedMediaId(
+                            item._id
+                          );
 
-                    >
+                          setShowCollectionModal(true);
 
-                      <FaDownload />
+                        }}
+                        className={`transition-all ${isSaved
+                          ? "text-purple-500"
+                          : "text-gray-500 hover:text-purple-500"} `}
 
-                    </a>
+                      >
+
+                        <FaBookmark />
+
+                      </button>
+
+                      <a
+
+                        href={item.url}
+
+                        download
+
+                        className="text-gray-500 hover:text-[#7B2CBF] transition-all"
+
+                      >
+
+                        <FaDownload />
+
+                      </a>
+
+                    </div>
+
+                  </div>
+                  <div className="px-5 pb-4">
+
+                    <p className="font-semibold text-sm text-[#2d1457]">
+
+                      {item.likes?.length || 0} likes
+
+                    </p>
 
                   </div>
 
                 </div>
-                <div className="px-5 pb-4">
 
-                  <p className="font-semibold text-sm text-[#2d1457]">
+              );
 
-                    {item.likes?.length || 0} likes
-
-                  </p>
-
-                </div>
-                <div className="px-5 pb-5 space-y-2">
-
-                  {
-
-                    item.comments?.map((comment, index) => (
-
-                      <div
-
-                        key={index}
-
-                        className="bg-[#f8f5ff] rounded-xl px-4 py-3"
-
-                      >
-
-                        <p className="font-semibold text-sm text-[#2d1457]">
-
-                          {comment.user}
-
-                        </p>
-
-                        <p className="text-sm text-gray-500 mt-1">
-
-                          {comment.text}
-
-                        </p>
-
-                      </div>
-
-
-                    ))
-
-                  }
-
-                </div>
-                <div className="px-5 pb-5 space-y-2">
-
-                  {
-
-                    item.comments?.map((comment, index) => (
-
-                      <div
-
-                        key={index}
-
-                        className="bg-[#f8f5ff] rounded-xl px-4 py-3"
-
-                      >
-
-                        <p className="font-semibold text-sm text-[#2d1457]">
-
-                          {comment.user}
-
-                        </p>
-
-                        <p className="text-sm text-gray-500 mt-1">
-
-                          {comment.text}
-
-                        </p>
-
-                      </div>
-
-                    ))
-
-                  }
-
-                </div>
-
-              </div>
-
-            ))
-
+            })
           }
 
         </div>
@@ -1074,9 +1296,13 @@ const EventDetails = () => {
 
               <button
 
-                onClick={() =>
-                  setShowComments(false)
-                }
+                onClick={() => {
+
+                  setShowComments(false);
+
+                  setSelectedMedia(null);
+
+                }}
 
                 className="absolute top-5 right-5 text-3xl text-gray-400 hover:text-red-500"
 
@@ -1094,7 +1320,7 @@ const EventDetails = () => {
 
               </h1>
 
-              {/* INPUT */}
+              {/* INPUT AREA */}
 
               <div className="flex gap-3 mt-6">
 
@@ -1118,9 +1344,18 @@ const EventDetails = () => {
 
                 <button
 
-                  onClick={addComment}
+                  onClick={() => {
 
-                  className="bg-gradient-to-r from-[#7B2CBF] to-[#4361EE] text-white px-6 rounded-2xl"
+                    if (!selectedMedia)
+                      return;
+
+                    addComment(
+                      selectedMedia._id
+                    );
+
+                  }}
+
+                  className="bg-gradient-to-r from-[#7B2CBF] to-[#4361EE] text-white px-8 rounded-2xl"
 
                 >
 
@@ -1129,40 +1364,166 @@ const EventDetails = () => {
                 </button>
 
               </div>
-
-              {/* COMMENTS */}
+              {/* COMMENTS LIST */}
 
               <div className="mt-8 flex flex-col gap-4 max-h-[400px] overflow-y-auto">
 
                 {
 
-                  comments.map((item) => (
+                  media
 
-                    <div
+                    .find(
+                      item =>
+                        item._id === selectedMedia?._id
+                    )
 
-                      key={item.id}
+                    ?.comments?.map(
 
-                      className="bg-[#f8f5ff] rounded-2xl p-4"
+                      (comment, index) => (
 
-                    >
+                        <div
 
-                      <h2 className="font-bold text-[#2d1457]">
+                          key={index}
 
-                        {item.user}
+                          className="bg-[#f8f5ff] rounded-2xl p-4"
 
-                      </h2>
+                        >
 
-                      <p className="text-gray-600 mt-1">
+                          <h2 className="font-bold text-[#2d1457]">
 
-                        {item.text}
+                            {comment.user}
 
-                      </p>
+                          </h2>
 
-                    </div>
+                          <p className="text-gray-600 mt-1">
 
-                  ))
+                            {comment.text}
+
+                          </p>
+
+                        </div>
+
+                      )
+
+                    )
 
                 }
+
+              </div>
+            </div>
+
+          </div>
+
+        )
+      },
+
+      {/* SHARE MODAL */}
+
+      {
+
+        showShare && (
+
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[999] flex items-center justify-center px-4">
+
+            <div className="w-full max-w-md bg-white rounded-[35px] shadow-2xl p-8 relative">
+
+              {/* CLOSE */}
+
+              <button
+
+                onClick={() =>
+                  setShowShare(false)
+                }
+
+                className="absolute top-5 right-5 text-3xl text-gray-400 hover:text-red-500"
+
+              >
+
+                ×
+
+              </button>
+
+              {/* TITLE */}
+
+              <h1 className="text-3xl font-black text-[#2d1457]">
+
+                Share Post
+
+              </h1>
+
+              {/* BUTTONS */}
+
+              <div className="grid grid-cols-2 gap-5 mt-8">
+
+                {/* WHATSAPP */}
+
+                <a
+
+                  href={`https://wa.me/?text=${window.location.href}`}
+
+                  target="_blank"
+
+                  className="bg-green-500 text-white rounded-2xl py-5 text-center font-bold hover:scale-105 transition-all"
+
+                >
+
+                  WhatsApp
+
+                </a>
+
+                {/* TWITTER */}
+
+                <a
+
+                  href={`https://twitter.com/intent/tweet?url=${window.location.href}`}
+
+                  target="_blank"
+
+                  className="bg-black text-white rounded-2xl py-5 text-center font-bold hover:scale-105 transition-all"
+
+                >
+
+                  Twitter/X
+
+                </a>
+
+                {/* TELEGRAM */}
+
+                <a
+
+                  href={`https://t.me/share/url?url=${window.location.href}`}
+
+                  target="_blank"
+
+                  className="bg-blue-500 text-white rounded-2xl py-5 text-center font-bold hover:scale-105 transition-all"
+
+                >
+
+                  Telegram
+
+                </a>
+
+                {/* COPY */}
+
+                <button
+
+                  onClick={() => {
+
+                    navigator.clipboard.writeText(
+
+                      window.location.href
+
+                    );
+
+                  }}
+
+                  className="bg-[#7B2CBF] text-white rounded-2xl py-5 font-bold hover:scale-105 transition-all"
+
+                >
+
+                  Copy Link
+
+                </button>
 
               </div>
 
@@ -1171,6 +1532,83 @@ const EventDetails = () => {
           </div>
 
         )
+
+      }
+
+      {/* COLLECTION MODAL */}
+
+      {
+
+        showCollectionModal && (
+
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[999] flex items-center justify-center px-4">
+
+            <div className="w-full max-w-md bg-white rounded-[35px] shadow-2xl p-8 relative">
+
+              {/* CLOSE */}
+
+              <button
+
+                onClick={() =>
+                  setShowCollectionModal(false)
+                }
+
+                className="absolute top-5 right-5 text-3xl text-gray-400 hover:text-red-500"
+
+              >
+
+                ×
+
+              </button>
+
+              <h1 className="text-3xl font-black text-[#2d1457]">
+
+                Save To Collection
+
+              </h1>
+
+              {/* CREATE */}
+
+              <div className="flex gap-3 mt-6">
+
+                <input
+
+                  type="text"
+
+                  value={newCollection}
+
+                  onChange={(e) =>
+                    setNewCollection(
+                      e.target.value
+                    )
+                  }
+
+                  placeholder="Create collection..."
+
+                  className="flex-1 bg-[#f8f5ff] rounded-2xl px-5 py-4 outline-none text-black"
+
+                />
+
+                <button
+
+                  onClick={createCollection}
+
+                  className="bg-gradient-to-r from-[#7B2CBF] to-[#4361EE] text-white px-6 rounded-2xl"
+
+                >
+
+                  Create
+
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        )
+
       }
 
     </div>

@@ -13,6 +13,7 @@ import EventDetails from "./pages/EventDetails";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Saved from "./pages/Saved";
 
 
 function App() {
@@ -63,7 +64,10 @@ function App() {
         }
       />
       <Route path="/event/:id" element={<EventDetails />} />
-      <Route path="/admin" element={<Admin />} /></Routes>
+      <Route path="/admin" element={<Admin />} />
+      <Route path="/saved" element={<Saved />}/>
+      </Routes>
+      
 
   );
 

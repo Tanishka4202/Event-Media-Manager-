@@ -11,7 +11,7 @@ import {
   FaCalendarAlt,
   FaImages,
   FaRobot,
-  FaUserCircle
+  FaUserCircle, FaBookmark
 
 } from "react-icons/fa";
 
@@ -120,7 +120,7 @@ const Navbar = () => {
 
         {/* LOGO */}
 
-        <h1 className="text-3xl lg:text-4xl font-black bg-gradient-to-r from-[#7B2CBF] to-[#4361EE] bg-clip-text text-transparent">
+        <h1 className="text-3xl lg:text-2xl font-black bg-gradient-to-r from-[#7B2CBF] to-[#4361EE] bg-clip-text text-transparent">
 
           EventSphere AI
 
@@ -157,6 +157,19 @@ const Navbar = () => {
         <div className="flex items-center gap-5">
 
           <div className="relative">
+            <button
+
+              onClick={() =>
+                navigate("/saved")
+              }
+
+              className="text-2xl text-[#7B2CBF] hover:scale-110 transition-all"
+
+            >
+
+              <FaBookmark />
+
+            </button>
 
             <button
 
@@ -236,7 +249,7 @@ const Navbar = () => {
 
             onClick={logout}
 
-            className="hidden md:flex items-center gap-3 bg-gradient-to-r from-[#7B2CBF] to-[#4361EE] text-white px-6 py-3 rounded-2xl shadow-lg hover:scale-105 transition-all"
+            className="hidden md:flex items-center gap-3 bg-gradient-to-r from-[#7B2CBF] to-[#4361EE] text-white px-5 py-3 rounded-2xl shadow-lg hover:scale-105 transition-all"
 
           >
 
@@ -290,7 +303,7 @@ const Navbar = () => {
                 setMenuOpen(false)
               }
 
-              className="flex items-center gap-3 text-[#2d1457] text-lg font-semibold"
+              className="flex items-center gap-3 text-[#2d1457] text-base font-semibold"
 
             >
 

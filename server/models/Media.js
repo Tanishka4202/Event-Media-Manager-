@@ -25,39 +25,31 @@ const mediaSchema =
     uploadedBy: {
       type: String
     },
-caption: {
-  type: String
-},
-    likes: [
+    caption: {
+      type: String
+    },
+    likes: [{userId: String }],
+    savedBy: [String],
 
-      {
+   comments: [
 
-        userId: String
+  {
 
-      }
+    user: String,
 
-    ],
+    text: String,
 
-    comments: [
+    createdAt: {
 
-      {
+      type: Date,
 
-        user: String,
+      default: Date.now
 
-        text: String,
+    }
 
-        createdAt: {
+  }
 
-          type: Date,
-
-          default: Date.now
-
-        }
-
-      }
-
-    ],
-
+],
     favourites: [
 
       {
@@ -80,13 +72,13 @@ caption: {
 
   },
 
-  {
+    {
 
-    timestamps: true
+      timestamps: true
 
-  }
+    }
 
-);
+  );
 
 module.exports =
   mongoose.model(

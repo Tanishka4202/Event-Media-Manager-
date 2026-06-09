@@ -8,23 +8,23 @@ const path = require("path");
 
 const storage = multer.diskStorage({
 
-    destination: (req, file, cb) => {
+  destination: (req, file, cb) => {
 
-        cb(null, "uploads/");
+    cb(null, "uploads/");
 
-    },
+  },
 
-    filename: (req, file, cb) => {
+  filename: (req, file, cb) => {
 
-        cb(
+    cb(
 
-            null,
+      null,
 
-            Date.now() + path.extname(file.originalname)
+      Date.now() + path.extname(file.originalname)
 
-        );
+    );
 
-    }
+  }
 
 });
 
@@ -36,73 +36,73 @@ const Media = require("../models/Media");
 
 router.post(
 
-    "/upload",
+  "/upload",
 
-    upload.single("file"),
+  upload.single("file"),
 
-    async (req, res) => {
-        console.log("UPLOAD ROUTE HIT");
+  async (req, res) => {
+    console.log("UPLOAD ROUTE HIT");
 
-        try {
+    try {
 
-            const file = req.file;
+      const file = req.file;
 
-            if (!file) {
+      if (!file) {
 
-                return res.status(400).json({
+        return res.status(400).json({
 
-                    message: "No file uploaded"
+          message: "No file uploaded"
 
-                });
+        });
 
-            }
+      }
 
-            const mediaItem = {
+      const mediaItem = {
 
-                url: `http://localhost:5000/uploads/${file.filename}`,
+        url: `http://localhost:5000/uploads/${file.filename}`,
 
-                type:
-                    file.mimetype.startsWith("image")
-                        ? "image"
-                        : "video",
+        type:
+          file.mimetype.startsWith("image")
+            ? "image"
+            : "video",
 
-                eventId:
-                    req.body.eventId,
+        eventId:
+          req.body.eventId,
 
-                uploadedBy:
-                    req.body.uploadedBy,
+        uploadedBy:
+          req.body.uploadedBy,
 
-                    caption: req.body.caption
+        caption: req.body.caption
 
-            };
+      };
 
-            await Media.create(
-                mediaItem
-            );
+      await Media.create(
+        mediaItem
+      );
 
-            res.status(201).json({
+      res.status(201).json({
 
-                message: "Uploaded",
+        message: "Uploaded",
 
-                media: mediaItem
+        media: mediaItem
 
-            });
-
-        }
-
-        catch (error) {
-
-            console.log(error);
-
-            res.status(500).json({
-
-                message: error.message
-
-            });
-
-        }
+      });
 
     }
+
+    catch (error) {
+
+      console.log(error);
+
+      res.status(500).json({
+
+        message: error.message
+
+      });
+
+    }
+
+  }
 
 );
 
@@ -193,12 +193,23 @@ router.put(
           req.params.id
         );
 
-      media.likes.push({
+      const alreadyLiked =
+        media.likes.includes(userId);
 
-        userId:
-          req.body.userId
+      if (alreadyLiked) {
 
-      });
+        media.likes =
+          media.likes.filter(
+            id => id !== userId
+          );
+
+      }
+
+      else {
+
+        media.likes.push(userId);
+
+      }
 
       await media.save();
 
@@ -220,7 +231,61 @@ router.put(
   }
 
 );
+router.post(
 
+  "/comment/:id",
+
+  async (req, res) => {
+
+    try {
+
+      const { user, text } =
+        req.body;
+
+      const mediaItem =
+        await Media.findById(
+          req.params.id
+        );
+
+      if (!mediaItem) {
+
+        return res.status(404).json({
+
+          message: "Media not found"
+
+        });
+
+      }
+
+      mediaItem.comments.unshift({
+
+        user,
+
+        text
+
+      });
+
+      await mediaItem.save();
+
+      res.json(mediaItem);
+
+    }
+
+    catch (error) {
+
+      console.log(error);
+
+      res.status(500).json({
+
+        message: error.message
+
+      });
+
+    }
+
+  }
+
+);
 router.put(
 
   "/comment/:id",
@@ -338,6 +403,80 @@ router.put(
 
         message:
           error.message
+
+      });
+
+    }
+
+  }
+
+);
+router.put(
+
+  "/save/:id",
+
+  async (req, res) => {
+
+    try {
+
+      const { userEmail } =
+        req.body;
+
+      const mediaItem =
+        await Media.findById(
+          req.params.id
+        );
+
+      if (!mediaItem) {
+
+        return res.status(404).json({
+
+          message: "Media not found"
+
+        });
+
+      }
+
+      const alreadySaved =
+
+        mediaItem.savedBy.includes(
+          userEmail
+        );
+
+      if (alreadySaved) {
+
+        mediaItem.savedBy =
+
+          mediaItem.savedBy.filter(
+
+            email =>
+              email !== userEmail
+
+          );
+
+      }
+
+      else {
+
+        mediaItem.savedBy.push(
+          userEmail
+        );
+
+      }
+
+      await mediaItem.save();
+
+      res.json(mediaItem);
+
+    }
+
+    catch (error) {
+
+      console.log(error);
+
+      res.status(500).json({
+
+        message: error.message
 
       });
 
