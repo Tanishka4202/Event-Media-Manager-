@@ -1,64 +1,132 @@
 const express = require("express");
 
-const Event = require("../models/Event");
-const authMiddleware = require("../middleware/authMiddleware");
-
 const router = express.Router();
 
-router.post("/create", authMiddleware, async (req, res) => {
+const Event = require("../models/Event");
 
-    try {
 
-        const {
-            title,
-            description,
-            category,
-            visibility
-        } = req.body;
+// CREATE EVENT
 
-        const event = await Event.create({
+router.post("/create", async (req, res) => {
 
-            title,
-            description,
-            category,
-            visibility,
+  try {
 
-            createdBy: req.user.id
+    const event = await Event.create(req.body);
 
-        });
+    res.status(201).json(event);
 
-        res.status(201).json({
-            message: "Event created successfully",
-            event
-        });
+  }
 
-    } catch (error) {
+  catch (error) {
 
-        res.status(500).json({
-            message: error.message
-        });
+    res.status(500).json({
 
-    }
+      message: error.message
+
+    });
+
+  }
 
 });
 
+
+// GET ALL EVENTS
+
 router.get("/", async (req, res) => {
 
-    try {
+  try {
 
-        const events = await Event.find()
-        .populate("createdBy", "name email");
+    const events = await Event.find();
 
-        res.status(200).json(events);
+    res.json(events);
 
-    } catch (error) {
+  }
 
-        res.status(500).json({
-            message: error.message
-        });
+  catch (error) {
 
-    }
+    res.status(500).json({
+
+      message: error.message
+
+    });
+
+  }
 
 });
 
 module.exports = router;
+// GET SINGLE EVENT
+
+router.get("/:id", async (req, res) => {
+
+  try {
+
+    const event =
+      await Event.findById(
+        req.params.id
+      );
+
+    res.json(event);
+
+  }
+
+  catch (error) {
+
+    res.status(500).json({
+
+      message:
+        error.message
+
+    });
+
+  }
+
+});
+
+// DELETE EVENT
+
+router.delete("/:id", async (req, res) => {
+
+  try {
+
+    const Event =
+      require("../models/Event");
+
+    const Media =
+      require("../models/Media");
+
+    // DELETE EVENT
+
+    await Event.findByIdAndDelete(
+      req.params.id
+    );
+
+    // DELETE MEDIA OF EVENT
+
+    await Media.deleteMany({
+
+      eventId: req.params.id
+
+    });
+
+    res.json({
+
+      message:
+        "Event deleted successfully"
+
+    });
+
+  }
+
+  catch (error) {
+
+    res.status(500).json({
+
+      message:
+        error.message
+
+    });
+
+  }
+
+});

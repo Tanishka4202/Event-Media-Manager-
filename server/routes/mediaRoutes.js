@@ -1,122 +1,102 @@
 const express = require("express");
 
-const multer = require("multer");
-
-const cloudinary =
-    require("../config/cloudinary");
-
-const Media =
-    require("../models/Media");
-
 const router = express.Router();
 
-const storage = multer.memoryStorage();
-const authMiddleware = require("../middleware/authMiddleware");
-const upload = multer({
-    storage
+const multer = require("multer");
+
+const path = require("path");
+
+const storage = multer.diskStorage({
+
+    destination: (req, file, cb) => {
+
+        cb(null, "uploads/");
+
+    },
+
+    filename: (req, file, cb) => {
+
+        cb(
+
+            null,
+
+            Date.now() + path.extname(file.originalname)
+
+        );
+
+    }
+
 });
 
+const upload = multer({ storage });
+const Media = require("../models/Media");
 
-// UPLOAD ROUTE
+
+// UPLOAD
 
 router.post(
 
     "/upload",
-     authMiddleware,
 
     upload.single("file"),
 
     async (req, res) => {
+        console.log("UPLOAD ROUTE HIT");
 
         try {
 
-            // CONVERT FILE
+            const file = req.file;
 
-            const b64 = Buffer
-                .from(req.file.buffer)
-                .toString("base64");
+            if (!file) {
 
-            const dataURI =
+                return res.status(400).json({
 
-                "data:" +
-
-                req.file.mimetype +
-
-                ";base64," +
-
-                b64;
-
-            // CLOUDINARY UPLOAD
-
-            const result =
-                await cloudinary.uploader.upload(
-                    dataURI
-                );
-
-            // AI TAGS
-
-            const randomTags = [
-
-                "crowd",
-                "event",
-                "sports",
-                "fest",
-                "concert",
-                "college",
-                "workshop",
-                "trip"
-
-            ];
-
-            const selectedTags =
-
-                randomTags
-
-                    .sort(() => 0.5 - Math.random())
-
-                    .slice(0, 3);
-
-            // SAVE MEDIA
-
-            const media =
-                await Media.create({
-                    mediaUrl:
-                    result.secure_url,
-                    
-                    mediaType:
-                    req.file.mimetype,
-                    
-                    tags:
-                    selectedTags,
-                    
-                    caption:
-                    "AI generated event memory 📸",
-                    
-                    uploadedBy: req.user.id,
-                    visibility:
-                        req.body.visibility ||
-
-                        "Public"
+                    message: "No file uploaded"
 
                 });
 
-            res.json({
+            }
 
-                message:
-                    "Image uploaded 🚀",
+            const mediaItem = {
 
-                media
+                url: `http://localhost:5000/uploads/${file.filename}`,
+
+                type:
+                    file.mimetype.startsWith("image")
+                        ? "image"
+                        : "video",
+
+                eventId:
+                    req.body.eventId,
+
+                uploadedBy:
+                    req.body.uploadedBy,
+
+                    caption: req.body.caption
+
+            };
+
+            await Media.create(
+                mediaItem
+            );
+
+            res.status(201).json({
+
+                message: "Uploaded",
+
+                media: mediaItem
 
             });
 
-        } catch (error) {
+        }
+
+        catch (error) {
 
             console.log(error);
 
             res.status(500).json({
 
-                message:
-                    error.message
+                message: error.message
 
             });
 
@@ -127,146 +107,244 @@ router.post(
 );
 
 
-// GET ALL MEDIA
+// GET MEDIA
 
 router.get(
 
-    "/all",
+  "/all/:eventId",
 
-    async (req, res) => {
+  async (req, res) => {
 
-        try {
+    try {
 
-            const media =
-                await Media.find();
+      const media =
 
-            res.json(media);
+        await Media.find({
 
-        } catch (error) {
+          eventId:
+            req.params.eventId
 
-            res.status(500).json({
+        });
 
-                message:
-                    error.message
-
-            });
-
-        }
+      res.json(media);
 
     }
 
-);
-router.get(
+    catch (error) {
 
-    "/my-uploads",
+      res.status(500).json({
 
-    authMiddleware,
+        message:
+          error.message
 
-    async (req, res) => {
-
-        try {
-
-            const media =
-                await Media.find({
-
-                    uploadedBy:
-                        req.user.id
-
-                });
-
-            res.json(media);
-
-        } catch (error) {
-
-            res.status(500).json({
-
-                message:
-                    error.message
-
-            });
-
-        }
+      });
 
     }
 
+  }
+
 );
 
-// LIKE
+router.delete(
+
+  "/:id",
+
+  async (req, res) => {
+
+    try {
+
+      await Media.findByIdAndDelete(
+        req.params.id
+      );
+
+      res.json({
+
+        message:
+          "Media deleted"
+
+      });
+
+    }
+
+    catch (error) {
+
+      res.status(500).json({
+
+        message:
+          error.message
+
+      });
+
+    }
+
+  }
+
+);
+router.put(
+
+  "/like/:id",
+
+  async (req, res) => {
+
+    try {
+
+      const media =
+        await Media.findById(
+          req.params.id
+        );
+
+      media.likes.push({
+
+        userId:
+          req.body.userId
+
+      });
+
+      await media.save();
+
+      res.json(media);
+
+    }
+
+    catch (error) {
+
+      res.status(500).json({
+
+        message:
+          error.message
+
+      });
+
+    }
+
+  }
+
+);
 
 router.put(
 
-    "/like/:id",
+  "/comment/:id",
 
-    async (req, res) => {
+  async (req, res) => {
 
-        try {
+    try {
 
-            const media =
-                await Media.findById(
-                    req.params.id
-                );
+      const media =
+        await Media.findById(
+          req.params.id
+        );
 
-            media.likes += 1;
+      media.comments.push({
 
-            await media.save();
+        user:
+          req.body.user,
 
-            res.json(media);
+        text:
+          req.body.text
 
-        } catch (error) {
+      });
 
-            res.status(500).json({
+      await media.save();
 
-                message:
-                    error.message
-
-            });
-
-        }
+      res.json(media);
 
     }
 
+    catch (error) {
+
+      res.status(500).json({
+
+        message:
+          error.message
+
+      });
+
+    }
+
+  }
+
 );
-
-
-// COMMENT
 
 router.put(
 
-    "/comment/:id",
+  "/favourite/:id",
 
-    async (req, res) => {
+  async (req, res) => {
 
-        try {
+    try {
 
-            const media =
-                await Media.findById(
-                    req.params.id
-                );
+      const media =
+        await Media.findById(
+          req.params.id
+        );
 
-            media.comments.push({
+      media.favourites.push({
 
-                text: req.body.text
+        userId:
+          req.body.userId
 
-            });
+      });
 
-            await media.save();
+      await media.save();
 
-            res.json(media);
-
-        } catch (error) {
-
-            res.status(500).json({
-
-                message:
-                    error.message
-
-            });
-
-        }
+      res.json(media);
 
     }
 
+    catch (error) {
+
+      res.status(500).json({
+
+        message:
+          error.message
+
+      });
+
+    }
+
+  }
+
 );
 
+router.put(
+
+  "/tag/:id",
+
+  async (req, res) => {
+
+    try {
+
+      const media =
+        await Media.findById(
+          req.params.id
+        );
+
+      media.taggedUsers.push({
+
+        name:
+          req.body.name
+
+      });
+
+      await media.save();
+
+      res.json(media);
+
+    }
+
+    catch (error) {
+
+      res.status(500).json({
+
+        message:
+          error.message
+
+      });
+
+    }
+
+  }
+
+);
 
 module.exports = router;

@@ -1,101 +1,261 @@
 const express = require("express");
+
 const bcrypt = require("bcryptjs");
+
 const jwt = require("jsonwebtoken");
 
 const User = require("../models/User");
 
+const authMiddleware =
+    require("../middleware/authMiddleware");
+
 const router = express.Router();
-const authMiddleware = require("../middleware/authMiddleware");
+
 
 // REGISTER
-router.post("/register", async (req, res) => {
 
-    try {
+router.post(
 
-        const { name, email, password } = req.body;
+    "/register",
 
-        const existingUser = await User.findOne({ email });
+    async (req, res) => {
 
-        if(existingUser){
-            return res.status(400).json({
-                message: "User already exists"
+        try {
+
+            const {
+
+                name,
+                email,
+                password,
+                role
+
+            } = req.body;
+
+            // CHECK USER
+
+            const existingUser =
+                await User.findOne({
+                    email
+                });
+
+            if (existingUser) {
+
+                return res.status(400).json({
+
+                    message:
+                        "User already exists"
+
+                });
+
+            }
+
+            // HASH PASSWORD
+
+            const hashedPassword =
+                await bcrypt.hash(
+                    password,
+                    10
+                );
+
+            // CREATE USER
+
+            const user = await User.create({
+
+                name,
+                email,
+                password: hashedPassword,
+                role
+
             });
+
+            // GENERATE TOKEN
+
+            const token =
+                jwt.sign(
+
+                    {
+
+                        id:
+                            user._id,
+
+                        role:
+                            user.role
+
+                    },
+
+                    process.env.JWT_SECRET,
+
+                    {
+
+                        expiresIn:
+                            "7d"
+
+                    }
+
+                );
+
+            // RESPONSE
+
+            res.status(201).json({
+
+                message:
+                    "User registered successfully",
+
+                token,
+
+                user: {
+
+                    _id:
+                        user._id,
+
+                    name:
+                        user.name,
+
+                    email:
+                        user.email
+
+                }
+
+            });
+
+        } catch (error) {
+
+            res.status(500).json({
+
+                message:
+                    error.message
+
+            });
+
         }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const user = await User.create({
-            name,
-            email,
-            password: hashedPassword
-        });
-
-        res.status(201).json({
-            message: "User registered successfully",
-            user
-        });
-
-    } catch (error) {
-
-        res.status(500).json({
-            message: error.message
-        });
 
     }
 
-});
-
+);
 
 
 // LOGIN
-router.post("/login", async (req, res) => {
 
-    try {
+router.post(
 
-        const { email, password } = req.body;
+    "/login",
 
-        const user = await User.findOne({ email });
+    async (req, res) => {
 
-        if(!user){
-            return res.status(400).json({
-                message: "User not found"
-            });
-        }
+        try {
 
-        const isMatch = await bcrypt.compare(password, user.password);
+            const {
+                email,
+                password
+            } = req.body;
 
-        if(!isMatch){
-            return res.status(400).json({
-                message: "Invalid credentials"
-            });
-        }
+            // FIND USER
 
-        const token = jwt.sign(
-            {
-                id: user._id,
-                role: user.role
-            },
-            process.env.JWT_SECRET,
-            {
-                expiresIn: "7d"
+            const user =
+                await User.findOne({
+                    email
+                });
+
+            if (!user) {
+
+                return res.status(400).json({
+
+                    message:
+                        "User not found"
+
+                });
+
             }
-        );
 
-        res.status(200).json({
-            message: "Login successful",
-            token,
-            user
-        });
+            // PASSWORD CHECK
 
-    } catch (error) {
+            const isMatch =
+                await bcrypt.compare(
 
-        res.status(500).json({
-            message: error.message
-        });
+                    password,
+
+                    user.password
+
+                );
+
+            if (!isMatch) {
+
+                return res.status(400).json({
+
+                    message:
+                        "Invalid credentials"
+
+                });
+
+            }
+
+            // TOKEN
+
+            const token =
+                jwt.sign(
+
+                    {
+
+                        id:
+                            user._id,
+
+                        role:
+                            user.role
+
+                    },
+
+                    process.env.JWT_SECRET,
+
+                    {
+
+                        expiresIn:
+                            "7d"
+
+                    }
+
+                );
+
+            // RESPONSE
+
+            res.status(200).json({
+
+                message:
+                    "Login successful",
+
+                token,
+
+                user: {
+
+                    _id:
+                        user._id,
+
+                    name:
+                        user.name,
+
+                    email:
+                        user.email
+
+                }
+
+            });
+
+        } catch (error) {
+
+            res.status(500).json({
+
+                message:
+                    error.message
+
+            });
+
+        }
 
     }
 
-});
+);
+
+
+// CURRENT USER
 
 router.get(
 
@@ -128,5 +288,6 @@ router.get(
     }
 
 );
+
 
 module.exports = router;

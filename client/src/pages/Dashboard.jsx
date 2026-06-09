@@ -30,82 +30,99 @@ const Dashboard = () => {
 
   ];
 
-  return (
+return (
 
-    <div className="min-h-screen bg-black text-white">
+  <div className="min-h-screen bg-gradient-to-br from-[#f8f5ff] via-[#fcfbff] to-[#eef2ff]">
 
-      <Navbar />
+    <Navbar />
 
-      <div className="p-10">
+    <div className="max-w-7xl mx-auto px-6 md:px-10 py-12">
 
-        <h1 className="text-6xl font-black text-green-400 mb-10">
-          Analytics Dashboard
-        </h1>
+      <h1 className="text-4xl md:text-5xl font-black text-[#2d1457] mb-3">
 
-        <div className="grid md:grid-cols-3 gap-10 mb-20">
+        Analytics Dashboard
 
-          <div className="bg-slate-900 p-10 rounded-3xl">
-            <h1 className="text-5xl font-bold">
-              120
-            </h1>
+      </h1>
 
-            <p className="text-gray-400 mt-3">
-              Media Uploads
-            </p>
-          </div>
+      <p className="text-gray-500 text-lg">
 
-          <div className="bg-slate-900 p-10 rounded-3xl">
-            <h1 className="text-5xl font-bold">
-              540
-            </h1>
+        Track uploads, engagement and event performance.
 
-            <p className="text-gray-400 mt-3">
-              Likes
-            </p>
-          </div>
+      </p>
 
-          <div className="bg-slate-900 p-10 rounded-3xl">
-            <h1 className="text-5xl font-bold">
-              24
-            </h1>
+      {/* STATS */}
 
-            <p className="text-gray-400 mt-3">
-              Events
-            </p>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+
+        <div className="bg-white rounded-3xl p-8 shadow-lg">
+
+          <h2 className="text-gray-500 text-lg">
+            Media Uploads
+          </h2>
+
+          <h1 className="text-5xl font-black text-[#7B2CBF] mt-4">
+            120
+          </h1>
 
         </div>
 
-        {/* CHART */}
+        <div className="bg-white rounded-3xl p-8 shadow-lg">
 
-        <div className="bg-slate-900 p-10 rounded-3xl h-[500px]">
+          <h2 className="text-gray-500 text-lg">
+            Likes
+          </h2>
 
-          <ResponsiveContainer width="100%" height="100%">
+          <h1 className="text-5xl font-black text-[#4361EE] mt-4">
+            540
+          </h1>
 
-            <BarChart data={data}>
+        </div>
 
-              <XAxis dataKey="name" />
+        <div className="bg-white rounded-3xl p-8 shadow-lg">
 
-              <YAxis />
+          <h2 className="text-gray-500 text-lg">
+            Events
+          </h2>
 
-              <Tooltip />
-
-              <Bar
-                dataKey="uploads"
-                fill="#22c55e"
-              />
-
-            </BarChart>
-
-          </ResponsiveContainer>
+          <h1 className="text-5xl font-black text-pink-500 mt-4">
+            24
+          </h1>
 
         </div>
 
       </div>
 
+      {/* CHART */}
+
+      <div className="bg-white rounded-3xl shadow-lg p-8 mt-12 h-[420px]">
+
+        <ResponsiveContainer width="100%" height="100%">
+
+          <BarChart data={data}>
+
+            <XAxis dataKey="name" />
+
+            <YAxis />
+
+            <Tooltip />
+
+            <Bar
+              dataKey="uploads"
+              fill="#7B2CBF"
+              radius={[10, 10, 0, 0]}
+            />
+
+          </BarChart>
+
+        </ResponsiveContainer>
+
+      </div>
+
     </div>
 
-  );
+  </div>
+
+);
 
 };
 

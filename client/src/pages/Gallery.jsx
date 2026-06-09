@@ -23,7 +23,7 @@ const Gallery = () => {
     try {
 
       const res = await axios.get(
-        "http://localhost:5000/api/media/all"
+        `${import.meta.env.VITE_API_URL}/api/media/all`
       );
 
       setMedia(res.data);
@@ -89,19 +89,19 @@ const Gallery = () => {
 
   return (
 
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-gradient-to-br from-[#f8f5ff] via-[#fcfbff] to-[#eef2ff]">
 
       <Navbar />
       <StoryBar />
       {/* HERO */}
 
-      <div className="p-10">
+      <div className="max-w-7xl mx-auto px-6 md:px-10 pt-10">
 
-        <h1 className="text-6xl text-green-400 font-black mb-5">
+        <h1 className="text-4xl md:text-5xl font-black text-[#2d1457] mb-4">
           AI Media Gallery
         </h1>
 
-        <p className="text-gray-400 text-xl">
+        <p className="text-gray-500 text-lg">
           Search, explore and discover event memories.
         </p>
 
@@ -109,35 +109,35 @@ const Gallery = () => {
 
       {/* SEARCH */}
 
-      <div className="px-10 mb-10">
+      <div className="max-w-7xl mx-auto px-6 md:px-10 mt-8">
 
         <input
           type="text"
           placeholder="Search AI tags, events..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-slate-900 text-white p-5 rounded-2xl outline-none text-xl"
+          className="w-full bg-white text-black p-5 rounded-2xl outline-none shadow-md"
         />
 
       </div>
 
       {/* FILTER BUTTONS */}
 
-      <div className="flex gap-4 px-10 mb-10 overflow-x-auto">
+      <div className="flex gap-4 max-w-7xl mx-auto px-6 md:px-10 mt-8 overflow-x-auto">
 
-        <button className="bg-green-500 px-6 py-3 rounded-full text-white">
+        <button className="bg-gradient-to-r from-[#7B2CBF] to-[#4361EE] px-6 py-3 rounded-full text-white">
           All
         </button>
 
-        <button className="bg-slate-800 px-6 py-3 rounded-full text-white">
+        <button className="bg-gradient-to-r from-[#7B2CBF] to-[#4361EE] px-6 py-3 rounded-full text-white">
           Fest
         </button>
 
-        <button className="bg-slate-800 px-6 py-3 rounded-full text-white">
+        <button className="bg-gradient-to-r from-[#7B2CBF] to-[#4361EE] px-6 py-3 rounded-full text-white">
           Workshops
         </button>
 
-        <button className="bg-slate-800 px-6 py-3 rounded-full text-white">
+        <button className="bg-gradient-to-r from-[#7B2CBF] to-[#4361EE] px-6 py-3 rounded-full text-white">
           Sports
         </button>
 

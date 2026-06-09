@@ -6,158 +6,476 @@ import toast from "react-hot-toast";
 
 import { useDropzone } from "react-dropzone";
 
+import imageCompression from "browser-image-compression";
+
 import Navbar from "../components/Navbar";
+
+import {
+
+  FaCloudUploadAlt,
+  FaTrash,
+  FaImages,
+  FaVideo
+
+} from "react-icons/fa";
 
 const Upload = () => {
 
-    const [files, setFiles] = useState([]);
+  const [files, setFiles] = useState([]);
 
-    const [preview, setPreview] = useState(null);
+  const [visibility, setVisibility] =
+    useState("Public");
 
-    const [visibility, setVisibility] =
-        useState("Public");
+  const [uploading, setUploading] =
+    useState(false);
 
-    const onDrop = useCallback((acceptedFiles) => {
+  const [progress, setProgress] =
+    useState(0);
 
-        const selectedFile = acceptedFiles[0];
+  const [selectedEvent, setSelectedEvent] =
+    useState("Cultural Fest");
 
-        setFiles(acceptedFiles);
+  const onDrop = useCallback(async (acceptedFiles) => {
 
-        setPreview(
-            URL.createObjectURL(selectedFile)
+    const processedFiles = [];
+
+    for (let file of acceptedFiles) {
+
+      // VALIDATION
+
+      if (
+        !file.type.startsWith("image/") &&
+        !file.type.startsWith("video/")
+      ) {
+
+        toast.error(
+          "Only images/videos allowed"
         );
 
-    }, []);
+        continue;
+      }
 
-    const {
-        getRootProps,
-        getInputProps
-    } = useDropzone({
-        onDrop
-    });
+      // IMAGE COMPRESSION
 
-    const handleUpload = async () => {
+      if (file.type.startsWith("image/")) {
 
-        for (const file of files) {
+        const compressed =
+          await imageCompression(
+            file,
+            {
+              maxSizeMB: 1,
+              maxWidthOrHeight: 1920,
+              useWebWorker: true
+            }
+          );
 
-    const formData =
-        new FormData();
+        processedFiles.push(
 
-    formData.append("file", file);
+          Object.assign(compressed, {
 
-    formData.append(
-        "visibility",
-        visibility
-    );
+            preview:
+              URL.createObjectURL(compressed)
 
-    await axios.post(
+          })
 
-        "http://localhost:5000/api/media/upload",
+        );
 
-        formData,
+      } else {
 
-        {
+        processedFiles.push(
+
+          Object.assign(file, {
+
+            preview:
+              URL.createObjectURL(file)
+
+          })
+
+        );
+
+      }
+
+    }
+
+    setFiles((prev) => [
+
+      ...prev,
+      ...processedFiles
+
+    ]);
+
+  }, []);
+
+  const {
+
+    getRootProps,
+    getInputProps
+
+  } = useDropzone({
+
+    onDrop,
+    multiple: true
+
+  });
+
+  const removeFile = (index) => {
+
+    const updated =
+      [...files];
+
+    updated.splice(index, 1);
+
+    setFiles(updated);
+
+  };
+
+  const handleUpload = async () => {
+
+    try {
+
+      setUploading(true);
+
+      for (const file of files) {
+
+        const formData =
+          new FormData();
+
+        formData.append(
+          "file",
+          file
+        );
+
+        formData.append(
+          "visibility",
+          visibility
+        );
+
+        formData.append(
+          "event",
+          selectedEvent
+        );
+
+        await axios.post(
+
+          `${import.meta.env.VITE_API_URL}/api/media/upload`,
+
+          formData,
+
+          {
 
             headers: {
 
-                authorization:
-                    localStorage.getItem(
-                        "token"
-                    )
+              authorization:
+                localStorage.getItem(
+                  "token"
+                )
+
+            },
+
+            onUploadProgress: (data) => {
+
+              setProgress(
+
+                Math.round(
+                  (data.loaded * 100) /
+                  data.total
+                )
+
+              );
 
             }
 
-        }
+          }
 
-    );
+        );
 
-}
+      }
 
-    };
+      toast.success(
+        "Media Uploaded Successfully 🚀"
+      );
 
-    return (
+      setFiles([]);
 
-        <div className="min-h-screen bg-black">
+      setProgress(0);
 
-            <Navbar />
+    } catch (error) {
 
-            <div className="flex flex-col items-center p-10">
+      console.log(error);
 
-                <h1 className="text-6xl font-black text-green-400 mb-10">
-                    AI Media Upload
-                </h1>
+      toast.error(
+        "Upload Failed"
+      );
 
-                {/* DROPZONE */}
+    } finally {
 
-                <div
-                    {...getRootProps()}
-                    className="border-2 border-dashed border-green-500 w-full max-w-2xl h-[300px] rounded-3xl flex flex-col items-center justify-center cursor-pointer bg-slate-900 hover:bg-slate-800 transition"
-                >
+      setUploading(false);
 
-                    <input {...getInputProps()} />
+    }
 
-                    <p className="text-2xl text-white">
-                        Drag & Drop Media Here
-                    </p>
+  };
 
-                    <p className="text-gray-400 mt-3">
-                        AI will auto-tag your uploads
-                    </p>
+  return (
 
-                </div>
+    <div className="min-h-screen bg-gradient-to-br from-[#f8f5ff] via-[#fcfbff] to-[#eef2ff]">
 
-                {/* VISIBILITY */}
+      <Navbar />
 
-                <select
-                    value={visibility}
-                    onChange={(e) =>
-                        setVisibility(
-                            e.target.value
-                        )
-                    }
-                    className="mt-6 bg-slate-900 text-white p-4 rounded-xl"
-                >
+      <div className="max-w-6xl mx-auto px-6 md:px-10 py-12">
 
-                    <option>Public</option>
+        {/* TITLE */}
 
-                    <option>Private</option>
+        <div className="mb-12">
 
-                </select>
+          <h1 className="text-5xl font-black text-[#2d1457]">
 
-                {/* PREVIEW */}
+            Upload Event Media
 
-                {preview && (
+          </h1>
 
-                    <div className="grid md:grid-cols-3 gap-6 mt-10">
+          <p className="text-gray-500 text-lg mt-3">
 
-                        {files.map((file, index) => (
+            Upload photos/videos with AI tagging and event organization.
 
-                            <img
-                                key={index}
-                                src={URL.createObjectURL(file)}
-                                className="w-[250px] rounded-3xl"
-                            />
-
-                        ))}
-
-                    </div>
-
-                )}
-
-                {/* BUTTON */}
-
-                <button
-                    onClick={handleUpload}
-                    className="mt-10 bg-green-500 hover:bg-green-600 px-10 py-4 rounded-2xl text-2xl text-white"
-                >
-                    Upload with AI
-                </button>
-
-            </div>
+          </p>
 
         </div>
 
-    );
+        {/* DROPZONE */}
+
+        <div
+
+          {...getRootProps()}
+
+          className="border-2 border-dashed border-[#7B2CBF] bg-white rounded-[35px] h-[260px] flex flex-col justify-center items-center cursor-pointer shadow-lg hover:bg-[#faf7ff] transition-all"
+
+        >
+
+          <input {...getInputProps()} />
+
+          <FaCloudUploadAlt className="text-6xl text-[#7B2CBF]" />
+
+          <h2 className="text-2xl font-bold text-[#2d1457] mt-5">
+
+            Drag & Drop Media Here
+
+          </h2>
+
+          <p className="text-gray-500 mt-2">
+
+            Bulk upload supported
+
+          </p>
+
+        </div>
+
+        {/* OPTIONS */}
+
+        <div className="flex flex-col md:flex-row gap-6 mt-8">
+
+          <select
+
+            value={selectedEvent}
+
+            onChange={(e) =>
+              setSelectedEvent(
+                e.target.value
+              )
+            }
+
+            className="bg-white shadow-md px-5 py-4 rounded-2xl outline-none"
+
+          >
+
+            <option>Cultural Fest</option>
+
+            <option>Hackathon</option>
+
+            <option>Photography Walk</option>
+
+          </select>
+
+          <select
+
+            value={visibility}
+
+            onChange={(e) =>
+              setVisibility(
+                e.target.value
+              )
+            }
+
+            className="bg-white shadow-md px-5 py-4 rounded-2xl outline-none"
+
+          >
+
+            <option>Public</option>
+
+            <option>Private</option>
+
+          </select>
+
+        </div>
+
+        {/* PREVIEW */}
+
+        {files.length > 0 && (
+
+          <div className="mt-14">
+
+            <div className="flex justify-between items-center mb-6">
+
+              <h2 className="text-3xl font-black text-[#2d1457]">
+
+                Media Preview
+
+              </h2>
+
+              <span className="text-gray-500">
+
+                {files.length} Files Selected
+
+              </span>
+
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+
+              {files.map((file, index) => (
+
+                <div
+
+                  key={index}
+
+                  className="bg-white rounded-[25px] overflow-hidden shadow-lg relative"
+
+                >
+
+                  {/* IMAGE */}
+
+                  {file.type.startsWith("image") ? (
+
+                    <img
+
+                      src={file.preview}
+
+                      className="w-full h-[220px] object-cover"
+
+                    />
+
+                  ) : (
+
+                    <video
+
+                      src={file.preview}
+
+                      className="w-full h-[220px] object-cover"
+
+                    />
+
+                  )}
+
+                  {/* REMOVE */}
+
+                  <button
+
+                    onClick={() =>
+                      removeFile(index)
+                    }
+
+                    className="absolute top-3 right-3 bg-red-500 text-white w-10 h-10 rounded-full flex items-center justify-center"
+
+                  >
+
+                    <FaTrash />
+
+                  </button>
+
+                  {/* TYPE */}
+
+                  <div className="p-4 flex items-center gap-3">
+
+                    {file.type.startsWith("image") ? (
+
+                      <FaImages className="text-[#7B2CBF]" />
+
+                    ) : (
+
+                      <FaVideo className="text-[#4361EE]" />
+
+                    )}
+
+                    <p className="text-sm truncate">
+
+                      {file.name}
+
+                    </p>
+
+                  </div>
+
+                </div>
+
+              ))}
+
+            </div>
+
+          </div>
+
+        )}
+
+        {/* PROGRESS */}
+
+        {uploading && (
+
+          <div className="mt-10">
+
+            <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+
+              <div
+
+                style={{
+                  width: `${progress}%`
+                }}
+
+                className="h-full bg-gradient-to-r from-[#7B2CBF] to-[#4361EE] transition-all"
+
+              />
+
+            </div>
+
+            <p className="text-center mt-3 text-gray-500">
+
+              Uploading... {progress}%
+
+            </p>
+
+          </div>
+
+        )}
+
+        {/* BUTTON */}
+
+        <button
+
+          onClick={handleUpload}
+
+          disabled={uploading}
+
+          className="mt-12 bg-gradient-to-r from-[#7B2CBF] to-[#4361EE] text-white px-10 py-4 rounded-2xl shadow-xl hover:scale-105 transition-all text-xl font-bold"
+
+        >
+
+          {uploading
+            ? "Uploading..."
+            : "Upload Media"}
+
+        </button>
+
+      </div>
+
+    </div>
+
+  );
 
 };
 

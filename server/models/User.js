@@ -9,9 +9,21 @@ const userSchema = new mongoose.Schema({
     password: String,
 
     role: {
-        type: String,
-        default: "Viewer"
-    }
+
+  type: String,
+
+  enum: [
+
+    "admin",
+    "photographer",
+    "member",
+    "viewer"
+
+  ],
+
+  default: "viewer"
+
+},
 
 });
 

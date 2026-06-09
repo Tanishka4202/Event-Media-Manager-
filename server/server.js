@@ -28,18 +28,23 @@ const io = new Server(server, {
     }
 
 });
+app.get("/", (req, res) => {
 
+    res.send("EventSphere AI Backend Running 🚀");
+
+});
 app.use(cors({
     origin: "*"
 }));
 
 app.use(express.json());
+app.use("/uploads", express.static("uploads"));
 
 app.use("/api/auth", authRoutes);
 
+app.use("/api/events", eventRoutes);
 app.use("/api/media", mediaRoutes);
 
-app.use("/api/events", eventRoutes);
 
 io.on("connection", (socket) => {
 

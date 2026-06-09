@@ -1,57 +1,95 @@
-const mongoose = require("mongoose");
+const mongoose =
+  require("mongoose");
 
-const mediaSchema = new mongoose.Schema({
+const mediaSchema =
+  new mongoose.Schema({
 
-    mediaUrl: {
-        type: String
+    url: {
+      type: String,
+      required: true
     },
 
-    mediaType: {
-        type: String
+    type: {
+      type: String,
+      enum: [
+        "image",
+        "video"
+      ]
     },
 
-    tags: [
-        String
-    ],
-
-    caption: {
-        type: String
+    eventId: {
+      type: String,
+      required: true
     },
+
     uploadedBy: {
-
-    type: mongoose.Schema.Types.ObjectId,
-
-    ref: "User"
-
+      type: String
+    },
+caption: {
+  type: String
 },
+    likes: [
 
-    visibility: {
-        type: String,
-        default: "Public"
-    },
+      {
 
+        userId: String
 
-    likes: {
-        type: Number,
-        default: 0
-    },
+      }
+
+    ],
 
     comments: [
 
-        {
-            text: String
+      {
+
+        user: String,
+
+        text: String,
+
+        createdAt: {
+
+          type: Date,
+
+          default: Date.now
+
         }
+
+      }
+
+    ],
+
+    favourites: [
+
+      {
+
+        userId: String
+
+      }
+
+    ],
+
+    taggedUsers: [
+
+      {
+
+        name: String
+
+      }
 
     ]
 
-},
+  },
 
-{
+  {
+
     timestamps: true
-});
+
+  }
+
+);
 
 module.exports =
-    mongoose.model(
-        "Media",
-        mediaSchema
-    );
+  mongoose.model(
+    "Media",
+    mediaSchema
+  );
