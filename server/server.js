@@ -55,21 +55,13 @@ app.get("/", (req, res) => {
 
 });
 app.use(
-
   cors({
-
     origin: [
-
       "http://localhost:5173",
-
       "https://event-media-manager.vercel.app"
-
     ],
-
-    credentials: true
-
+    credentials: true,
   })
-
 );
 
 app.use(express.json());
