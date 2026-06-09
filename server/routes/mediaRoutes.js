@@ -9,9 +9,13 @@ const path = require("path");
 const Media = require("../models/Media");
 
 const Event = require("../models/Event");
+const protect =
+  require("../middleware/authMiddleware");
 
+const allowRoles =
+  require("../middleware/roleMiddleware");
 const generateTags =
-require("../utils/generateTags");
+  require("../utils/generateTags");
 
 /* STORAGE */
 
@@ -53,116 +57,71 @@ router.post(
 
   "/upload",
 
-  upload.single("file"),
+  protect,
+
+  allowRoles(
+
+    "admin",
+
+    "photographer"
+
+  ),
+
+  upload.single("media"),
 
   async (req, res) => {
 
-    console.log("UPLOAD ROUTE HIT");
-
     try {
 
-      const file = req.file;
+      const {
 
-      if (!file) {
+        eventId,
 
-        return res.status(400).json({
+        uploadedBy,
 
-          message: "No file uploaded"
+        visibility,
 
-        });
+        caption
 
-      }
+      } = req.body;
 
-      /* BODY DATA */
+      const aiTags =
+        generateTags(
 
-      const caption =
-        req.body.caption;
-
-      const eventId =
-        req.body.eventId;
-
-      const uploadedBy =
-        req.body.uploadedBy;
-
-      /* FIND EVENT */
-
-      const event =
-        await Event.findById(
-          eventId
+          req.file.originalname
         );
+      const result = req.file;
 
-      /* GENERATE TAGS */
-
-      let tags = [];
-
-      console.log(
-        "GENERATING TAGS..."
-      );
-
-      try {
-
-        tags =
-          await generateTags(
-
-            event?.name || "",
-
-            event?.description || "",
-
-            caption || ""
-
-          );
-
-        console.log(
-          "TAGS:",
-          tags
-        );
-
-      }
-
-      catch (error) {
-
-        console.log(
-
-          "TAG ERROR:",
-
-          error.message
-
-        );
-
-      }
-
-      /* CREATE MEDIA */
-
-      const mediaItem =
+      const media =
         await Media.create({
 
           url:
-            `http://localhost:5000/uploads/${file.filename}`,
+            `/uploads/${req.file.filename}`,
 
           type:
-            file.mimetype.startsWith("image")
+            req.file.mimetype.startsWith(
 
-              ? "image"
+              "video"
 
-              : "video",
+            )
+
+              ? "video"
+
+              : "image",
 
           eventId,
 
           uploadedBy,
 
+          visibility,
+
           caption,
 
-          tags
+          tags: aiTags,
 
         });
 
-      res.status(201).json({
-
-        message: "Uploaded",
-
-        media: mediaItem
-
-      });
+      res.json(media);
 
     }
 
@@ -187,19 +146,21 @@ router.post(
 /* GET EVENT MEDIA */
 /* ========================= */
 
+
 router.get(
 
-  "/all/:eventId",
+  "/all",
 
   async (req, res) => {
 
     try {
 
       const media =
-        await Media.find({
+        await Media.find()
 
-          eventId:
-            req.params.eventId
+        .sort({
+
+          createdAt: -1
 
         });
 
@@ -208,6 +169,8 @@ router.get(
     }
 
     catch (error) {
+
+      console.log(error);
 
       res.status(500).json({
 
@@ -268,77 +231,73 @@ router.delete(
 /* LIKE MEDIA */
 /* ========================= */
 
-router.put(
+router.put("/like/:id", async (req, res) => {
 
-  "/like/:id",
+  try {
 
-  async (req, res) => {
+    const { userId } = req.body;
 
-    try {
+    const media =
+      await Media.findById(req.params.id);
 
-      const { userId } =
-        req.body;
+    if (!media) {
 
-      const media =
-        await Media.findById(
-
-          req.params.id
-
-        );
-
-      const alreadyLiked =
-        media.likes.includes(
-          userId
-        );
-
-      if (alreadyLiked) {
-
-        media.likes =
-          media.likes.filter(
-
-            id => id !== userId
-
-          );
-
-      }
-
-      else {
-
-        media.likes.push(
-          userId
-        );
-
-      }
-
-      await media.save();
-
-      res.json(media);
-
-    }
-
-    catch (error) {
-
-      res.status(500).json({
-
-        message:
-          error.message
-
+      return res.status(404).json({
+        message: "Media not found"
       });
 
     }
 
+    // SAFETY FIX
+
+    media.likes =
+      media.likes.map((like) =>
+
+        typeof like === "object"
+          ? like.userId
+          : like
+
+      );
+
+    const alreadyLiked =
+      media.likes.includes(userId);
+
+    if (alreadyLiked) {
+
+      media.likes =
+        media.likes.filter(
+          (id) => id !== userId
+        );
+
+    } else {
+
+      media.likes.push(userId);
+
+    }
+
+    await media.save();
+
+    res.json(media);
+
   }
 
-);
+  catch (error) {
+
+    console.log(error);
+
+    res.status(500).json({
+      message: error.message
+    });
+
+  }
+
+});
 
 /* ========================= */
 /* COMMENT */
 /* ========================= */
-
 router.post(
-
   "/comment/:id",
-
   async (req, res) => {
 
     try {
@@ -346,31 +305,37 @@ router.post(
       const { user, text } =
         req.body;
 
+      if (!text) {
+
+        return res.status(400).json({
+          message: "Comment required"
+        });
+
+      }
+
       const media =
         await Media.findById(
-
           req.params.id
-
         );
 
       if (!media) {
 
         return res.status(404).json({
-
-          message:
-            "Media not found"
-
+          message: "Media not found"
         });
 
       }
 
-      media.comments.unshift({
+      const newComment = {
 
         user,
-
         text
 
-      });
+      };
+
+      media.comments.unshift(
+        newComment
+      );
 
       await media.save();
 
@@ -383,16 +348,12 @@ router.post(
       console.log(error);
 
       res.status(500).json({
-
-        message:
-          error.message
-
+        message: error.message
       });
 
     }
 
   }
-
 );
 
 /* ========================= */
@@ -400,26 +361,47 @@ router.post(
 /* ========================= */
 
 router.put(
-
-  "/favourite/:id",
-
+  "/save/:id",
   async (req, res) => {
 
     try {
 
+      const { userEmail } =
+        req.body;
+
       const media =
         await Media.findById(
-
           req.params.id
-
         );
 
-      media.favourites.push({
+      if (!media) {
 
-        userId:
-          req.body.userId
+        return res.status(404).json({
+          message: "Media not found"
+        });
 
-      });
+      }
+
+      const alreadySaved =
+        media.savedBy.includes(
+          userEmail
+        );
+
+      if (alreadySaved) {
+
+        media.savedBy =
+          media.savedBy.filter(
+            (email) =>
+              email !== userEmail
+          );
+
+      } else {
+
+        media.savedBy.push(
+          userEmail
+        );
+
+      }
 
       await media.save();
 
@@ -430,18 +412,13 @@ router.put(
     catch (error) {
 
       res.status(500).json({
-
-        message:
-          error.message
-
+        message: error.message
       });
 
     }
 
   }
-
 );
-
 /* ========================= */
 /* TAG USERS */
 /* ========================= */

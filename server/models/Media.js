@@ -1,9 +1,7 @@
-const mongoose =
-  require("mongoose");
+const mongoose = require("mongoose");
 
-const mediaSchema =
-  new mongoose.Schema({
-
+const mediaSchema = new mongoose.Schema(
+  {
     url: {
       type: String,
       required: true
@@ -11,10 +9,8 @@ const mediaSchema =
 
     type: {
       type: String,
-      enum: [
-        "image",
-        "video"
-      ]
+      enum: ["image", "video"],
+      required: true
     },
 
     eventId: {
@@ -25,64 +21,52 @@ const mediaSchema =
     uploadedBy: {
       type: String
     },
+
     caption: {
-      type: String
+      type: String,
+      default: ""
     },
-    likes: [{userId: String }],
-    savedBy: [String],
 
-   comments: [
+    tags: {
+      type: [String],
+      default: []
+    },
 
-  {
+    likes: {
+      type: [String],
+      default: []
+    },
 
-    user: String,
+    savedBy: {
+      type: [String],
+      default: []
+    },
 
-    text: String,
+    shares: {
+      type: Number,
+      default: 0
+    },
 
-    createdAt: {
-
-      type: Date,
-
-      default: Date.now
-
-    }
-
-  }
-
-],
-tags: [String],
-    favourites: [
-
+    comments: [
       {
+        user: String,
 
-        userId: String
+        text: String,
 
+        createdAt: {
+          type: Date,
+          default: Date.now
+        }
       }
-
-    ],
-
-    taggedUsers: [
-
-      {
-
-        name: String
-
-      }
-
     ]
-
   },
 
-    {
+  {
+    timestamps: true
+  }
+);
 
-      timestamps: true
-
-    }
-
-  );
-
-module.exports =
-  mongoose.model(
-    "Media",
-    mediaSchema
-  );
+module.exports = mongoose.model(
+  "Media",
+  mediaSchema
+);

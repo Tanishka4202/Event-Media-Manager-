@@ -25,7 +25,7 @@ function App() {
 
     (data) => {
 
-      toast.success(data.message);
+    toast.success(data.text);
 
     }
 
@@ -47,7 +47,6 @@ function App() {
       <Route path="/" element={<Login />} />
       <Route path="/events" element={<Events />} />
       <Route path="/gallery" element={<Gallery />} />
-      <Route path="/" element={<Login />} />
 <Route path="/landing" element={<Landing />} />
       <Route path="/ai-photos" element={<AIPhotos />} />
       <Route path="/dashboard" element={<Dashboard />} />

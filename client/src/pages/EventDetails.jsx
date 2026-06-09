@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useParams } from "react-router-dom";
-import { io } from "socket.io-client";
+import socket from "../socket";
+import html2canvas from "html2canvas";
 
 import {
 
@@ -32,8 +33,21 @@ const EventDetails = () => {
     useState(false);
 
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [media, setMedia] =
+    useState([]);
 
-  const [media, setMedia] = useState([]);
+
+  const [stats, setStats] = useState({
+
+    photos: 0,
+
+    videos: 0,
+
+    storage: 0,
+
+    contributors: 0
+
+  });
   const { id } = useParams();
   const [event, setEvent] = useState(null);
   const [caption, setCaption] = useState("");
@@ -48,21 +62,114 @@ const EventDetails = () => {
   const [newCollection, setNewCollection] = useState("");
   const [search, setSearch] =
     useState("");
+  const [page, setPage] =
+    useState(1);
+
+  const [loadingMore, setLoadingMore] =
+    useState(false);
+
+  const [hasMore, setHasMore] =
+    useState(true);
 
   // FETCH MEDIA
+  const fetchMedia = async (
 
-  const fetchMedia = async () => {
+    pageNumber = 1
+
+  ) => {
 
     try {
 
       const res =
         await axios.get(
 
-          `${import.meta.env.VITE_API_URL}/api/media/all/${id}`
+          `${import.meta.env.VITE_API_URL}/api/media/all/${id}?page=${pageNumber}&limit=9`
 
         );
 
-      setMedia(res.data);
+      if (pageNumber === 1) {
+setMedia(
+  res.data
+);
+     const photos =
+
+  res.data.filter(
+
+    (item) =>
+      item.type === "image"
+
+  ).length;
+
+const videos =
+
+  res.data.filter(
+
+    (item) =>
+      item.type === "video"
+
+  ).length;
+
+const contributors =
+
+  new Set(
+
+    res.data.map(
+
+      (item) =>
+        item.uploadedBy
+
+    )
+
+  ).size;
+
+const storage =
+  (
+
+    res.data.length * 2.4
+
+  ).toFixed(1);
+
+setStats({
+
+  photos,
+
+  videos,
+
+  storage,
+
+  contributors
+
+});
+
+      }
+
+      else {
+setMedia((prev) =>
+
+  prev.map((item) => {
+
+    if (!item) return null;
+
+    return item._id === mediaId
+
+      ? {
+
+          ...item,
+
+          likes: res.data.likes
+
+        }
+
+      : item;
+
+  }).filter(Boolean)
+
+);
+      }
+
+      setHasMore(
+        res.data.hasMore
+      );
 
     }
 
@@ -73,6 +180,80 @@ const EventDetails = () => {
     }
 
   };
+  const fetchMoreMedia = async () => {
+
+    if (loadingMore || !hasMore)
+      return;
+
+    setLoadingMore(true);
+
+    const nextPage =
+      page + 1;
+
+    try {
+
+      const res =
+        await axios.get(
+
+          `${import.meta.env.VITE_API_URL}/api/media/all/${id}?page=${nextPage}&limit=9`
+
+        );
+
+      setMedia((prev) => {
+
+        const existingIds =
+          new Set(
+
+            prev.map(
+              (item) => item._id
+            )
+
+          );
+
+        const filtered =
+          res.data.media.filter(
+
+            (item) =>
+
+              !existingIds.has(
+                item._id
+              )
+
+          );
+
+        return [
+
+          ...prev,
+
+          ...filtered
+
+        ];
+
+      });
+
+      setPage(nextPage);
+
+      setHasMore(
+        res.data.hasMore
+      );
+
+    }
+
+    catch (error) {
+
+      console.log(error);
+
+    }
+
+    finally {
+
+      setLoadingMore(false);
+
+    }
+
+  };
+
+
   const fetchEvent = async () => {
 
     try {
@@ -83,6 +264,8 @@ const EventDetails = () => {
           `${import.meta.env.VITE_API_URL}/api/events/${id}`
 
         );
+
+      console.log(res.data);
 
       setEvent(res.data);
 
@@ -95,6 +278,8 @@ const EventDetails = () => {
     }
 
   };
+
+
   const fetchCollections = async () => {
 
     try {
@@ -119,12 +304,17 @@ const EventDetails = () => {
   };
   useEffect(() => {
 
-    fetchMedia();
+    setMedia([]);
+
+    setPage(1);
+
+    fetchMedia(1);
 
     fetchEvent();
+
     fetchCollections();
 
-  }, []);
+  }, [id]);
 
   // HANDLE FILES
 
@@ -207,11 +397,12 @@ const EventDetails = () => {
 
   };
 
+
   const saveToCollection = async (
 
     collectionId,
+    mediaId,
 
-    mediaId
 
   ) => {
 
@@ -222,22 +413,42 @@ const EventDetails = () => {
         `${import.meta.env.VITE_API_URL}/api/collections/save`,
 
         {
-
           collectionId,
-
           mediaId
-
         }
+
+      );
+      setMedia((prev) =>
+
+        prev.map((item) =>
+
+          item._id === mediaId
+
+            ? {
+
+              ...item,
+
+              savedBy: [
+
+                ...(item.savedBy || []),
+
+                user.email
+
+              ]
+
+            }
+
+            : item
+
+        )
 
       );
 
       toast.success(
-
-        "Saved 😭🔥"
-
+        "Saved successfully 🚀"
       );
 
-      setShowSaveModal(false);
+      setShowCollectionModal(false);
 
     }
 
@@ -246,14 +457,15 @@ const EventDetails = () => {
       console.log(error);
 
       toast.error(
-
         "Failed to save"
-
       );
 
     }
 
+
   };
+
+
   // UPLOAD
 
   const uploadMedia = async () => {
@@ -306,7 +518,7 @@ const EventDetails = () => {
           {
 
             headers: {
-              Authorization: `Bearer ${token}`,
+              authorization: token,
               "Content-Type": "multipart/form-data"
             }
 
@@ -324,7 +536,12 @@ const EventDetails = () => {
 
       setSelectedFiles([]);
 
-      fetchMedia();
+      const updated =
+        await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/media/all/${id}`
+        );
+
+      setMedia(updated.data);
 
     }
 
@@ -354,7 +571,7 @@ const EventDetails = () => {
         "Media deleted"
       );
 
-      fetchMedia();
+      fetchMedia(1);
 
     }
 
@@ -369,52 +586,54 @@ const EventDetails = () => {
     }
 
   };
-  const likeMedia = async (mediaId) => {
 
-    try {
+  
+  const likeMedia = async (
 
-      const user = JSON.parse(
+  mediaId
 
-        localStorage.getItem("user")
+) => {
 
-      );
+  try {
 
+    const res =
       await axios.put(
 
-        `${import.meta.env.VITE_API_URL}/api/media/like/${mediaId}`,
+`${import.meta.env.VITE_API_URL}/api/media/like/${mediaId}`,
 
         {
 
-          userId: user._id
+          userId:
+            user._id
 
         }
 
       );
 
-      socket.emit(
+    setMedia((prev) =>
 
-        "send_notification",
+      prev.map((item) =>
 
-        {
+        item._id === mediaId
 
-          message:
-            `${user.name} liked a photo ❤️`
+          ? res.data
 
-        }
+          : item
 
-      );
+      )
 
-      fetchMedia();
+    );
 
-    }
+  }
 
-    catch (error) {
+  catch (error) {
 
-      console.log(error);
+    console.log(error);
 
-    }
+  }
 
-  };
+};
+
   const shareMedia = async (mediaId) => {
 
     try {
@@ -473,7 +692,7 @@ const EventDetails = () => {
 
       );
 
-      await axios.put(
+      await axios.post(
 
         `${import.meta.env.VITE_API_URL}/api/media/comment/${mediaId}`,
 
@@ -486,23 +705,37 @@ const EventDetails = () => {
         }
 
       );
+      await axios.post(
 
-      socket.emit(
-
-        "send_notification",
+        `${import.meta.env.VITE_API_URL}/api/notifications/create`,
 
         {
 
-          message:
-            `${user.name} commented 💬`
+          sender: user.name,
+
+          receiver: "Tanishka",
+
+          text:
+            `${user.name} commented on your photo 💬`,
+
+          type: "comment",
+
+          mediaId
 
         }
 
       );
+      socket.emit(
+        "send_notification",
+        {
+          id: Date.now(),
+          text: `${user.name} commented 💬`
+        }
+      );
 
       setCommentText("");
 
-      fetchMedia();
+      fetchMedia(1);
 
     }
 
@@ -520,7 +753,7 @@ const EventDetails = () => {
     try {
 
       const res =
-        await axios.put(
+        await axios.post(
 
           `${import.meta.env.VITE_API_URL}/api/media/save/${mediaId}`,
 
@@ -638,28 +871,6 @@ ${item.tags?.join(" ")}
 
       );
 
-      /* UPDATE OPEN POPUP */
-
-      setSelectedMedia((prev) => {
-
-        if (!prev)
-          return prev;
-
-        return {
-
-          ...prev,
-
-          comments: [
-
-            newComment,
-
-            ...(prev.comments || [])
-
-          ]
-
-        };
-
-      });
 
       /* SAVE TO DATABASE */
 
@@ -676,22 +887,28 @@ ${item.tags?.join(" ")}
         }
 
       );
+      setSelectedMedia((prev) => ({
+
+        ...prev,
+
+        comments: [
+
+          newComment,
+
+          ...(prev?.comments || [])
+
+        ]
+
+      }));
 
       /* REALTIME NOTIFICATION */
 
       socket.emit(
-
         "send_notification",
-
         {
-
           id: Date.now(),
-
-          text:
-            `${user.name} commented on your upload 💬`
-
+          text: `${user.name} commented 💬`
         }
-
       );
 
     }
@@ -750,7 +967,7 @@ ${item.tags?.join(" ")}
 
             <h1 className="text-6xl font-black text-[#2d1457] leading-none">
 
-              {event?.name}
+              {event?.title}
 
             </h1>
 
@@ -793,22 +1010,34 @@ ${item.tags?.join(" ")}
           <div>
 
             {/* UPLOAD BUTTON */}
+            {
 
-            <button
+              (
 
-              onClick={() =>
-                setShowUpload(true)
-              }
+                user?.role === "admin"
 
-              className="w-full bg-gradient-to-r from-[#7B2CBF] to-[#4361EE] text-white py-5 rounded-[24px] shadow-xl flex items-center justify-center gap-3 hover:scale-[1.02] transition-all font-semibold text-lg"
+                ||
 
-            >
+                user?.role === "photographer"
 
-              <FaUpload className="text-sm" />
+              )
 
-              Upload Media
+              && (
+                <button
 
-            </button>
+                  onClick={() =>
+                    setShowUpload(true)
+                  }
+
+                  className="w-full bg-gradient-to-r from-[#7B2CBF] to-[#4361EE] text-white py-5 rounded-[24px] shadow-xl flex items-center justify-center gap-3 hover:scale-[1.02] transition-all font-semibold text-lg"
+
+                >
+
+                  <FaUpload className="text-sm" />
+
+                  Upload Media
+
+                </button>)}
 
             {/* STATS */}
 
@@ -822,7 +1051,7 @@ ${item.tags?.join(" ")}
 
                 <h1 className="text-3xl font-black mt-4 text-[#2d1457]">
 
-                  320
+                  {stats.photos}
 
                 </h1>
 
@@ -841,8 +1070,7 @@ ${item.tags?.join(" ")}
                 <FaVideo className="text-lg text-[#4361EE]" />
 
                 <h1 className="text-3xl font-black mt-4 text-[#2d1457]">
-
-                  42
+                  {stats.videos}
 
                 </h1>
 
@@ -862,7 +1090,7 @@ ${item.tags?.join(" ")}
 
                 <h1 className="text-3xl font-black mt-4 text-[#2d1457]">
 
-                  12GB
+                  {stats.storage} GB
 
                 </h1>
 
@@ -882,7 +1110,7 @@ ${item.tags?.join(" ")}
 
                 <h1 className="text-3xl font-black mt-4 text-[#2d1457]">
 
-                  18
+                  {stats.contributors}
 
                 </h1>
 
@@ -916,37 +1144,64 @@ ${item.tags?.join(" ")}
         />
         {/* MEDIA GRID */}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-7 mt-14">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mt-14">
 
           {
-            media.map((item, index) => {
+
+           media.map((item, index) => {
 
               const isLiked =
-
                 item.likes?.includes(
-                  user?.email
+                  user?._id
                 );
-              const isSaved =
 
+              const isSaved =
                 item.savedBy?.includes(
                   user?.email
                 );
 
               return (
 
-                <div key={index}
-                  className="bg-white rounded-[30px] overflow-hidden shadow-xl relative group">
-                  <button
+                <div
 
-                    onClick={() =>
-                      deleteMedia(item._id)
-                    } className="absolute top-4 right-4 w-11 h-11 rounded-full bg-red-500/90 backdrop-blur-md
-  text-white flex items-center justify-center shadow-2xl opacity-0 group-hover:opacity-100
- translate-y-[-10px] group-hover:translate-y-0 transition-all duration-300 hover:scale-110 hover:bg-red-600 z-50">
+                  key={`${item._id}-${index}`}
 
-                    <FaTrash className="text-sm" />
+                  className="w-full bg-white rounded-[32px] overflow-hidden shadow-xl relative group hover:scale-[1.02] transition-all duration-300"
 
-                  </button>
+                >
+
+                  {/* DELETE BUTTON */}
+                  {
+
+                    user?.role === "admin"
+
+                      ||
+
+                      item.uploadedBy === user?.name
+
+                      ? (
+
+                        <button
+
+                          onClick={() =>
+                            deleteMedia(item._id)
+                          }
+
+                          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-red-500/90 text-white flex items-center justify-center z-50 hover:scale-110 transition-all"
+
+                        >
+
+                          <FaTrash />
+
+                        </button>
+                      )
+
+                      : null
+
+                  }
+
+                  {/* MEDIA */}
+
                   {
 
                     item.type === "image"
@@ -959,7 +1214,7 @@ ${item.tags?.join(" ")}
 
                           alt="media"
 
-                          className="w-full h-[260px] object-cover"
+                          className="w-full aspect-[3/4] object-cover"
 
                         />
 
@@ -973,16 +1228,17 @@ ${item.tags?.join(" ")}
 
                           controls
 
-                          className="w-full h-[260px] object-cover"
+                          className="w-full aspect-[3/4] object-cover"
 
                         />
 
                       )
 
-
-
                   }
-                  <div className="flex flex-wrap gap-2 px-5 pt-4">
+
+                  {/* TAGS */}
+
+                  <div className="flex flex-wrap gap-2 px-5 pt-5">
 
                     {
 
@@ -992,7 +1248,7 @@ ${item.tags?.join(" ")}
 
                           <span
 
-                            key={index}
+                            key={`${item._id}-${index}`}
 
                             className="px-3 py-1 rounded-full bg-[#f3ebff] text-[#7B2CBF] text-xs font-semibold"
 
@@ -1009,46 +1265,35 @@ ${item.tags?.join(" ")}
                     }
 
                   </div>
-                  <div className="flex items-center justify-between px-5 py-4">
+
+                  {/* ACTIONS */}
+
+                  <div className="flex items-center justify-between px-5 py-5">
 
                     {/* LEFT */}
-
-                    <div className="flex items-center gap-6 mt-4">
+                    <div className="flex items-center gap-5">
 
                       {/* LIKE */}
 
                       <button
 
-                        onClick={() => {
+                        onClick={() =>
+                          likeMedia(item._id)
+                        }
 
-                          likeMedia(item._id);
-
-                          // socket.emit(
-
-                          //   "send_notification",
-
-                          //   {
-
-                          //     id: Date.now(),
-
-                          //     text:
-                          //       `${user.name} liked your photo ❤️`
-
-                          //   }
-
-                          // );
-
-                        }} className={`flex items-center gap-2 transition-all ${isLiked
+                        className={`flex items-center gap-2 transition-all ${isLiked
 
                           ? "text-red-500"
 
-                          : "text-gray-500 hover:text-red-500"}
+                          : "text-gray-500 hover:text-red-500"
 
-`}>
+                          }`}
 
-                        <FaHeart />
+                      >
 
-                        <span>
+                        <FaHeart className="text-lg" />
+
+                        <span className="font-medium">
 
                           {item.likes?.length || 0}
 
@@ -1068,13 +1313,13 @@ ${item.tags?.join(" ")}
 
                         }}
 
-                        className="flex items-center gap-2 text-gray-500 hover:text-blue-500 transition-all"
+                        className="flex items-center gap-2 text-gray-500 hover:text-[#7B2CBF] transition-all"
 
                       >
 
-                        <FaComment />
+                        <FaComment className="text-lg" />
 
-                        <span>
+                        <span className="font-medium">
 
                           {item.comments?.length || 0}
 
@@ -1082,37 +1327,28 @@ ${item.tags?.join(" ")}
 
                       </button>
 
+                    </div>
+                    {/* RIGHT */}
+
+                    <div className="flex items-center gap-5">
+
                       {/* SHARE */}
 
                       <button
 
-                        onClick={() => {
+                        onClick={() =>
+                          shareMedia(item._id)
+                        }
 
-                          setSelectedShareMedia(item);
-
-                          setShowShare(true);
-
-                        }}
-
-                        className="flex items-center gap-2 text-gray-500 hover:text-green-500 transition-all"
+                        className="text-gray-500 hover:text-green-500 transition-all"
 
                       >
 
-                        <FaShare />
-
-                        <span className="text-base">
-
-                          {item.shares || 0}
-
-                        </span>
+                        <FaShare className="text-lg" />
 
                       </button>
 
-                    </div>
-
-                    {/* RIGHT */}
-
-                    <div className="flex items-center gap-5">
+                      {/* SAVE */}
 
                       <button
 
@@ -1125,48 +1361,48 @@ ${item.tags?.join(" ")}
                           setShowCollectionModal(true);
 
                         }}
+
                         className={`transition-all ${isSaved
-                          ? "text-purple-500"
-                          : "text-gray-500 hover:text-purple-500"} `}
+
+                          ? "text-[#7B2CBF]"
+
+                          : "text-gray-500 hover:text-[#7B2CBF]"
+
+                          }`}
 
                       >
 
-                        <FaBookmark />
+                        <FaBookmark className="text-lg" />
 
                       </button>
 
-                      <a
+                      {/* DOWNLOAD */}
 
-                        href={item.url}
+                      <button
 
-                        download
+                        onClick={() =>
+                          handleDownload(item.url)
+                        }
 
-                        className="text-gray-500 hover:text-[#7B2CBF] transition-all"
+                        className="text-gray-500 hover:text-[#4361EE] transition-all"
 
                       >
 
-                        <FaDownload />
+                        <FaDownload className="text-lg" />
 
-                      </a>
+                      </button>
 
                     </div>
-
-                  </div>
-                  <div className="px-5 pb-4">
-
-                    <p className="font-semibold text-sm text-[#2d1457]">
-
-                      {item.likes?.length || 0} likes
-
-                    </p>
-
                   </div>
 
                 </div>
 
               );
 
+
+
             })
+
           }
 
         </div>
@@ -1255,17 +1491,16 @@ ${item.tags?.join(" ")}
 
                 selectedFiles.length > 0 && (
 
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mt-14">
 
                     {
 
                       selectedFiles.map((file, index) => (
-
                         <div
 
-                          key={index}
+                          key={`${item._id}-${index}`}
 
-                          className="bg-white rounded-[30px] overflow-hidden shadow-xl relative group hover:scale-[1.02] transition-all duration-300"
+                          className="w-full bg-white rounded-[32px] overflow-hidden shadow-xl relative group hover:scale-[1.02] transition-all duration-300"
 
                         >
 
@@ -1444,42 +1679,34 @@ ${item.tags?.join(" ")}
 
                 {
 
-                  media
+                  selectedMedia?.comments?.map(
 
-                    .find(
-                      item =>
-                        item._id === selectedMedia?._id
-                    )
+                    (comment, index) => (
 
-                    ?.comments?.map(
+                      <div
 
-                      (comment, index) => (
+                       key={`${item._id}-${index}`}
+                        className="bg-[#f8f5ff] rounded-2xl p-4"
 
-                        <div
+                      >
 
-                          key={index}
+                        <h2 className="font-bold text-[#2d1457]">
 
-                          className="bg-[#f8f5ff] rounded-2xl p-4"
+                          {comment.user}
 
-                        >
+                        </h2>
 
-                          <h2 className="font-bold text-[#2d1457]">
+                        <p className="text-gray-600 mt-1">
 
-                            {comment.user}
+                          {comment.text}
 
-                          </h2>
+                        </p>
 
-                          <p className="text-gray-600 mt-1">
-
-                            {comment.text}
-
-                          </p>
-
-                        </div>
-
-                      )
+                      </div>
 
                     )
+
+                  )
 
                 }
 
@@ -1692,11 +1919,8 @@ ${item.tags?.join(" ")}
                         onClick={() => {
 
                           saveToCollection(
-
                             collection._id,
-
-                            selectedSaveMedia._id
-
+                            selectedMediaId
                           );
 
                         }}

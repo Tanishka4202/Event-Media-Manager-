@@ -3,7 +3,7 @@ const express = require("express");
 const router = express.Router();
 
 const Collection =
-require("../models/Collection");
+  require("../models/Collection");
 
 
 
@@ -64,16 +64,16 @@ router.get(
 
       const collections =
 
-await Collection.find({
+        await Collection.find({
 
-userEmail:
-req.params.email
+          userEmail:
+            req.params.email
 
-})
+        })
 
-.populate("media");
+          .populate("media");
 
-res.json(collections);
+      res.json(collections);
 
     }
 
@@ -131,32 +131,46 @@ router.put(
         });
 
       }
-
       const alreadySaved =
-
-        collection.media.includes(
-          mediaId
+        collection.media.some(
+          (id) =>
+            id.toString() === mediaId
         );
 
-      if (!alreadySaved) {
+      if (alreadySaved) {
+
+        return res.json(collection);
+
+      }
+
+      /* PREVENT DUPLICATES */
+
+      if (
+
+        !collection.media.includes(
+
+          mediaId
+
+        )
+
+      ) {
 
         collection.media.push(
+
           mediaId
+
         );
 
       }
 
       await collection.save();
 
-      const updatedCollection =
+      res.json({
 
-        await Collection.findById(
-          collectionId
-        )
+        message:
+          "Saved successfully"
 
-        .populate("media");
-
-      res.json(updatedCollection);
+      });
 
     }
 
@@ -166,7 +180,8 @@ router.put(
 
       res.status(500).json({
 
-        message: error.message
+        message:
+          error.message
 
       });
 
@@ -175,7 +190,5 @@ router.put(
   }
 
 );
-
-
 
 module.exports = router;

@@ -4,65 +4,144 @@ import { useState } from "react";
 import socket from "../socket";
 import axios from "axios";
 
-const MediaCard = ({ item }) => {
+const MediaCard = ({
+
+  item,
+  media,
+  setMedia
+
+}) => {
 
     const [comment, setComment] = useState("");
 
     // LIKE FUNCTION
 
-    const handleLike = async () => {
+  const handleLike = async () => {
 
-        try {
+  try {
 
-            await axios.put(
-                `http://localhost:5000/api/media/like/${item._id}`
-            );
+    const user = JSON.parse(
+      localStorage.getItem("user")
+    );
 
-            socket.emit(
-                "send_notification",
-                "Someone liked a photo ❤️"
-            );
+    const res = await axios.put(
 
-            window.location.reload();
+      `${import.meta.env.VITE_API_URL}/api/media/like/${item._id}`,
 
-        } catch (error) {
+      {
 
-            console.log(error);
+        userId: user._id
 
-        }
+      }
 
-    };
+    );
+
+    setMedia((prev) =>
+
+      prev.map((mediaItem) =>
+
+        mediaItem._id === item._id
+
+          ? res.data
+
+          : mediaItem
+
+      )
+
+    );
+
+    socket.emit(
+
+      "send_notification",
+
+      {
+
+        id: Date.now(),
+
+        text:
+          `${user.name} liked a photo ❤️`
+
+      }
+
+    );
+
+  }
+
+  catch (error) {
+
+    console.log(error);
+
+  }
+
+};
 
     // COMMENT FUNCTION
 
-    const handleComment = async () => {
+  const handleComment = async () => {
 
-        try {
+  try {
 
-            await axios.put(
+    if (!comment.trim())
+      return;
 
-                `http://localhost:5000/api/media/comment/${item._id}`,
+    const user = JSON.parse(
+      localStorage.getItem("user")
+    );
 
-                {
-                    text: comment
-                }
+    const res = await axios.post(
 
-            );
+      `${import.meta.env.VITE_API_URL}/api/media/comment/${item._id}`,
 
-            socket.emit(
-                "send_notification",
-                "New comment added 💬"
-            );
+      {
 
-            window.location.reload();
+        user: user.name,
 
-        } catch (error) {
+        text: comment
 
-            console.log(error);
+      }
 
-        }
+    );
 
-    };
+    setMedia((prev) =>
+
+      prev.map((mediaItem) =>
+
+        mediaItem._id === item._id
+
+          ? res.data
+
+          : mediaItem
+
+      )
+
+    );
+
+    setComment("");
+
+    socket.emit(
+
+      "send_notification",
+
+      {
+
+        id: Date.now(),
+
+        text:
+          `${user.name} commented 💬`
+
+      }
+
+    );
+
+  }
+
+  catch (error) {
+
+    console.log(error);
+
+  }
+
+};
 
     return (
 
@@ -76,7 +155,7 @@ const MediaCard = ({ item }) => {
         >
 
             <img
-                src={item.mediaUrl}
+                src={item.url}
                 alt=""
                 className="w-full object-cover"
             />
@@ -137,11 +216,11 @@ const MediaCard = ({ item }) => {
                         onClick={handleLike}
                         className="bg-green-500 px-4 py-2 rounded-xl"
                     >
-                        ❤️ {item.likes}
+                        ❤️ {item.likes?.length || 0}
                     </button>
 
                     <a
-                        href={`${item.mediaUrl}?text=EventSphereAI`}
+                        href={`${item.url}?text=EventSphereAI`}
                         target="_blank"
                         className="bg-blue-500 px-4 py-2 rounded-xl"
                     >

@@ -15,8 +15,11 @@ const userSchema = new mongoose.Schema({
   enum: [
 
     "admin",
+
     "photographer",
+
     "member",
+
     "viewer"
 
   ],
@@ -24,7 +27,6 @@ const userSchema = new mongoose.Schema({
   default: "viewer"
 
 },
-
 });
 
 module.exports =

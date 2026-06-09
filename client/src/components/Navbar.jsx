@@ -1,6 +1,6 @@
-import { io } from "socket.io-client";
+import socket from "../socket";
 import { useState, useEffect } from "react";
-
+import axios from "axios";
 import {
 
   FaBell,
@@ -25,51 +25,86 @@ const Navbar = () => {
     useState(false);
   const [showNotifications, setShowNotifications] =
     useState(false);
+const [notifications, setNotifications] =
+  useState([]);
+const user = JSON.parse(
 
-  const [notifications, setNotifications] =
-    useState([
-      {
-        id: 1,
-        text: "Rohan liked your photo ❤️"
-      },
-      {
-        id: 2,
-        text: "Ananya commented on your upload 💬"
-      }
-    ]);
+  localStorage.getItem(
+    "user"
+  )
 
-  const socket = io(import.meta.env.VITE_API_URL);
-  useEffect(() => {
+);
 
-    socket.on(
 
-      "receive_notification",
+useEffect(() => {
 
-      (data) => {
+  const fetchNotifications =
+    async () => {
+
+      try {
+
+        const user =
+          JSON.parse(
+
+            localStorage.getItem(
+              "user"
+            )
+
+          );
+
+        const res =
+          await axios.get(
+
+`${import.meta.env.VITE_API_URL}/api/notifications/${user.name}`
+
+          );
 
         setNotifications(
-          (prev) => [
-
-            data,
-            ...prev
-
-          ]
+          res.data
         );
 
       }
 
-    );
+      catch (error) {
 
-    return () => {
+        console.log(error);
 
-      socket.off(
-        "receive_notification"
-      );
+      }
 
     };
 
-  }, []);
+  fetchNotifications();
 
+}, []);
+useEffect(() => {
+
+  socket.on(
+
+    "receive_notification",
+
+    (data) => {
+
+      setNotifications((prev) => [
+
+        data,
+
+        ...prev
+
+      ]);
+
+    }
+
+  );
+
+  return () => {
+
+    socket.off(
+      "receive_notification"
+    );
+
+  };
+
+}, []);
   const logout = () => {
 
     localStorage.removeItem("token");
@@ -98,11 +133,6 @@ const Navbar = () => {
       path: "/gallery"
     },
 
-    {
-      name: "AI Photos",
-      icon: <FaRobot />,
-      path: "/ai"
-    },
 
     {
       name: "Profile",
@@ -189,7 +219,13 @@ const Navbar = () => {
 
               <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center">
 
-                {notifications.length}
+                {
+  notifications.filter(
+
+    (item) => !item.read
+
+  ).length
+}
 
               </span>
 
@@ -216,7 +252,7 @@ const Navbar = () => {
 
                         <div
 
-                          key={item.id}
+                         key={item._id || item.id}
 
                           className="bg-[#f8f5ff] rounded-2xl p-4 hover:bg-[#f0e8ff] transition-all"
 

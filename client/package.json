@@ -15,6 +15,7 @@
     "browser-image-compression": "^2.0.2",
     "face-api.js": "^0.22.2",
     "framer-motion": "^12.40.0",
+    "html2canvas": "^1.4.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-dropzone": "^15.0.0",

@@ -29,6 +29,9 @@ const io = new Server(server, {
 
 });
 
+const notificationRoutes =
+  require("./routes/notificationRoutes");
+
 const collectionRoutes =require("./routes/collectionRoutes");
 
 app.get("/", (req, res) => {
@@ -48,6 +51,13 @@ app.use("/api/auth", authRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/media", mediaRoutes);
 app.use( "/api/collections", collectionRoutes);
+app.use(
+
+  "/api/notifications",
+
+  notificationRoutes
+
+);
 
 io.on("connection", (socket) => {
 

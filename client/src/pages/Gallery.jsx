@@ -183,10 +183,15 @@ const Gallery = () => {
 
             {filteredMedia.map((item) => (
 
-              <MediaCard
-                key={item._id}
-                item={item}
-              />
+             <MediaCard
+
+  item={item}
+
+  media={media}
+
+  setMedia={setMedia}
+
+/>
 
             ))}
 

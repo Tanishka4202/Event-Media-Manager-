@@ -1,4 +1,10 @@
 const express = require("express");
+const protect =
+  require("../middleware/authMiddleware");
+  
+  const allowRoles =
+  require("../middleware/roleMiddleware");
+  
 
 const router = express.Router();
 
@@ -6,8 +12,15 @@ const Event = require("../models/Event");
 
 
 // CREATE EVENT
+ router.post(
 
-router.post("/create", async (req, res) => {
+  "/create",
+
+  protect,
+
+  allowRoles("admin"),
+
+  async (req, res) => {
 
   try {
 
